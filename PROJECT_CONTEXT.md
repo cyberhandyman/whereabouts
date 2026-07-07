@@ -27,6 +27,9 @@
 **上架材料**:`publishing/app-store-metadata.md`(文案包)+ `Whereabouts/Whereabouts-AppStore.entitlements`(macOS 沙箱,提交 App Store 前在 project.yml 挂 CODE_SIGN_ENTITLEMENTS;挂上后本机数据目录会变,先导出 JSON)。
 **catalog 坑(Phase 112)**:代码里 `Text("key \(x)")` 运行时查找的 key 是 `"key %lld/%@"`(带格式后缀)。catalog 里 8 个手写条目原本没带后缀 → 界面显示原始 key(dup.alert.* / update.alert.* / detail.history.count / input.preview.willCreate),已补别名条目。以后加带插值的 key,**条目名必须含格式后缀**。
 **价格修正(Phase 112)**:ClaudeModel 加了 sonnet5 / opus48;Opus 4.7/4.8 成本估算 $5/$25(旧表 $15/$75 是错的)。
+**数据事故 + 专属库路径(Phase 114,2026-07-07)**:苹果系统进程 `/usr/libexec/icloudmailagent` 会写非沙箱 SwiftData 共用的 `~/Library/Application Support/default.store`,把何处的库覆盖了。macOS 版改用专属路径 `~/Library/Application Support/Whereabouts/whereabouts.store`(WhereaboutsApp.sharedContainer 用 ModelConfiguration(url:),所有 Scene 传同一实例);数据恢复脚本 `Tools/recover_store.sh`(sudo 跑,从 TM 本地快照捞)。**任何非沙箱 SwiftData app 都不要用默认路径**。
+**iOS 首启体验(Phase 115)**:分页引导(IOSOnboardingView,onboardingShown key,设置→关于可重看)+ 首启演示数据(rawInput 标记 `__hechu_demo__`,横幅一键清除)+ 设置里 iCloud"即将推出"占位。
+**GitHub(2026-07-07 起公开)**:主仓库 github.com/cyberhandyman/whereabouts(gitignore 排除 site/、SESSION_TRANSCRIPT.md、.claude/);文档站仓库 cyberhandyman/whereabouts-site。推送用钥匙串里的 HTTPS 凭据。
 
 ---
 
