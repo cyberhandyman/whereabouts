@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- macOS App Store 提交必须开启 App Sandbox。
+         日常 dev 构建不挂这个文件(见发布手册):挂上后数据目录会搬进
+         ~/Library/Containers/com.bamcope.whereabouts/,旧数据需要先导出 JSON 再导入。
+         启用方式:project.yml 的 Whereabouts target settings 加
+           CODE_SIGN_ENTITLEMENTS: Whereabouts/Whereabouts-AppStore.entitlements
+         然后 xcodegen generate。 -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- AI 调用(HTTPS 到用户自选的服务商) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- JSON 导入 / 导出、从 Finder 选照片 —— 仅限用户在面板里主动选择的文件 -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>

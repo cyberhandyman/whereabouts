@@ -1,0 +1,72 @@
+# Xcode — 项目用 xcodegen 管理,.xcodeproj 是生成产物,clone 后跑 `xcodegen` 重生
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+DerivedData/
+build/
+.build/
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# CocoaPods (not used, just in case)
+Pods/
+
+# Carthage (not used)
+Carthage/Build/
+Carthage/Checkouts/
+
+# macOS
+.DS_Store
+**/.DS_Store
+._*
+.AppleDouble
+
+# Generated
+*.hmap
+
+# Coverage / profiling
+*.profdata
+*.profraw
+*.gcda
+*.gcno
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Env / secrets
+.env
+.env.local
+.envrc
+
+# Release artifacts(每次发布从 source 重新打包)
+*.dmg
+dist/
+release/
+
+# 临时 / 备份
+*.bak
+*.tmp
+*.log
+
+# 本地专属(2026-07-07 GitHub 发布时补)
+dist-dmg/
+# 1.3MB 个人开发会话记录,不进公开仓库
+SESSION_TRANSCRIPT.md
+# 文档站有独立仓库 cyberhandyman/whereabouts-site
+site/
+.claude/
+.claude.bak/
