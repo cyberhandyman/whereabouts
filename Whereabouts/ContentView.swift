@@ -616,6 +616,12 @@ struct ContentView: View {
             NSApp.activate(ignoringOtherApps: true)
             #endif
         }
+        #if os(macOS)
+        // Phase 117:退出 app 时自动往 iCloud 云盘写一份 JSON 备份(同步版,quit 前完成)。
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            CloudBackup.backUpBlocking(context: modelContext)
+        }
+        #endif
     }
 
     /// Phase 97:状态栏 AI 行。

@@ -7,13 +7,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Author: Bam Cope"
+            "value": "Author: Chengzhu Zhao"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "作者:Bam Cope"
+            "value": "作者:Chengzhu Zhao"
           }
         }
       }
@@ -122,6 +122,7 @@
     },
     "action.collapse": {
       "comment": "Generic collapse action (iOS detail timeline).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -207,6 +208,7 @@
     },
     "action.expandAll": {
       "comment": "Generic expand-all action (iOS detail timeline).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -490,6 +492,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "新建顶层「%@」"
+          }
+        }
+      }
+    },
+    "ambiguousLocation.message %@ %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "ambiguousLocation.message %1$@ %2$@"
           }
         }
       }
@@ -1264,6 +1276,7 @@
     },
     "demo.cleared.toast": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1315,6 +1328,7 @@
     },
     "detail.button.refreshParse": {
       "comment": "Detail page header: short text shown beside the sparkles icon — the actual sheet still says 'Re-parse'.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1332,6 +1346,7 @@
     },
     "detail.button.refreshParse.tooltip": {
       "comment": "Detail page header: tooltip on the sparkles button.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1349,6 +1364,7 @@
     },
     "detail.history.count": {
       "comment": "Count badge next to 'History' section header. English needs one/other plural variants; Chinese is invariant.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "variations": {
@@ -1382,6 +1398,7 @@
         }
       }
     },
+    "detail.history.count %@": {},
     "detail.history.count %lld": {
       "comment": "Count badge next to 'History' section header. English needs one/other plural variants; Chinese is invariant. [Phase 112 alias:代码用字符串插值查找时 key 带格式后缀,补一份同内容条目让两端都能命中。]",
       "localizations": {
@@ -1929,6 +1946,7 @@
     },
     "dup.alert.button.complete": {
       "comment": "Duplicate alert: 'Add info to <name>' button shown when the new sentence has no location. %@ = existing item name.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1980,6 +1998,7 @@
     },
     "dup.alert.button.updateLocation": {
       "comment": "Duplicate alert: 'Move to <new-path>' button. %@ = new location path.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2014,6 +2033,7 @@
     },
     "dup.alert.message.noLocation": {
       "comment": "Duplicate alert body when the new sentence didn't say a new location. %1$@ = existing item name, %2$@ = existing location path, %3$@ = comma-joined summary of new metadata. Step 1 TBD-8.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2048,6 +2068,7 @@
     },
     "dup.alert.message.withLocation": {
       "comment": "Duplicate alert body when both an existing and a new location exist. %1$@ = existing name, %2$@ = existing path, %3$@ = new name, %4$@ = new path. Step 1 TBD-9.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2813,6 +2834,7 @@
     },
     "filter.section.title": {
       "comment": "Header at the top of the search/filter bar.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3221,6 +3243,7 @@
     },
     "input.preview.willCreate": {
       "comment": "Prefix above the multi-item parse preview. English needs one/other plural variants; Chinese is invariant.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "variations": {
@@ -3254,6 +3277,7 @@
         }
       }
     },
+    "input.preview.willCreate %@": {},
     "input.preview.willCreate %lld": {
       "comment": "Prefix above the multi-item parse preview. English needs one/other plural variants; Chinese is invariant. [Phase 112 alias:代码用字符串插值查找时 key 带格式后缀,补一份同内容条目让两端都能命中。]",
       "localizations": {
@@ -3428,6 +3452,7 @@
     },
     "ios.about.help": {
       "comment": "iOS settings — bundled help viewer link.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3445,6 +3470,7 @@
     },
     "ios.about.privacy": {
       "comment": "iOS settings — privacy policy web link.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3462,6 +3488,7 @@
     },
     "ios.about.replayOnboarding": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3479,6 +3506,7 @@
     },
     "ios.about.version": {
       "comment": "iOS settings — version row label.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3496,6 +3524,7 @@
     },
     "ios.home.title": {
       "comment": "iOS home navigation title — short brand name (app.name is the long macOS window title).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3513,6 +3542,7 @@
     },
     "ios.record.ack": {
       "comment": "iOS record tab — success toast after saving.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3547,6 +3577,7 @@
     },
     "ios.settings.title": {
       "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3564,6 +3595,7 @@
     },
     "ios.stat.items": {
       "comment": "iOS home stat tile caption — total items.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3581,6 +3613,7 @@
     },
     "ios.stat.lent": {
       "comment": "iOS home stat tile caption — lent-out items.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3598,6 +3631,7 @@
     },
     "ios.stat.pinned": {
       "comment": "iOS home stat tile caption — pinned items.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3615,6 +3649,7 @@
     },
     "ios.stat.rooms": {
       "comment": "iOS home stat tile caption — distinct rooms.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3632,6 +3667,7 @@
     },
     "ios.tab.items": {
       "comment": "iOS tab bar — main list tab.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3649,6 +3685,7 @@
     },
     "ios.tab.record": {
       "comment": "iOS tab bar — quick record tab.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3666,6 +3703,7 @@
     },
     "ios.tab.settings": {
       "comment": "iOS tab bar — settings tab.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3955,6 +3993,7 @@
     },
     "notification.body %@": {
       "comment": "Local notification body. %@ = item name.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4006,6 +4045,7 @@
     },
     "onboarding.ai.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4023,23 +4063,25 @@
     },
     "onboarding.ai.point2": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cheap: ~**half a cent** per item, free when unused"
+            "value": "Cheap: ~**half a cent** per item — and Volcengine's generous free tier for new users can last **a lifetime** of light use"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "很便宜:理解一件东西约 **2 分钱**,不用不花钱"
+            "value": "很便宜:理解一件东西约 **2 分钱**;首次注册火山引擎还送大量免费额度,轻度使用**这辈子都花不完**"
           }
         }
       }
     },
     "onboarding.ai.point3": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4057,6 +4099,7 @@
     },
     "onboarding.ai.subtitle": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4074,6 +4117,7 @@
     },
     "onboarding.ai.title": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4091,6 +4135,7 @@
     },
     "onboarding.detail.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4108,6 +4153,7 @@
     },
     "onboarding.detail.point2": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4125,6 +4171,7 @@
     },
     "onboarding.detail.point3": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4142,6 +4189,7 @@
     },
     "onboarding.detail.subtitle": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4159,6 +4207,7 @@
     },
     "onboarding.detail.title": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4176,6 +4225,7 @@
     },
     "onboarding.gestures.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4193,6 +4243,7 @@
     },
     "onboarding.gestures.point2": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4210,6 +4261,7 @@
     },
     "onboarding.gestures.point3": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4227,6 +4279,7 @@
     },
     "onboarding.gestures.subtitle": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4244,6 +4297,7 @@
     },
     "onboarding.gestures.title": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4261,6 +4315,7 @@
     },
     "onboarding.next": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4278,6 +4333,7 @@
     },
     "onboarding.record.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4295,6 +4351,7 @@
     },
     "onboarding.record.point2": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4312,6 +4369,7 @@
     },
     "onboarding.record.point3": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4329,6 +4387,7 @@
     },
     "onboarding.record.subtitle": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4346,6 +4405,7 @@
     },
     "onboarding.record.title": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4363,6 +4423,7 @@
     },
     "onboarding.skip": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4380,6 +4441,7 @@
     },
     "onboarding.start": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4397,6 +4459,7 @@
     },
     "onboarding.welcome.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4414,6 +4477,7 @@
     },
     "onboarding.welcome.point2": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4431,6 +4495,7 @@
     },
     "onboarding.welcome.point3": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4448,23 +4513,25 @@
     },
     "onboarding.welcome.subtitle": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remember where things are — in one sentence."
+            "value": "Remember where things are — in one sentence. Think of it as a trainer for your inner J: organized, effortlessly."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "东西放哪了,一句话记下,再也不翻箱倒柜。"
+            "value": "东西放哪了,一句话记下,再也不翻箱倒柜。这是一个「J人」养成器 —— 让整理有条理这件事,毫不费力。"
           }
         }
       }
     },
     "onboarding.welcome.title": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4550,6 +4617,7 @@
     },
     "quickEntry.hotkey": {
       "comment": "Shows the hotkey shortcut in the header corner.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4697,6 +4765,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "快速录入"
+          }
+        }
+      }
+    },
+    "record.voice.denied": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone & speech permissions needed — enable them in Settings → Privacy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要麦克风与语音识别权限 —— 到 设置 → 隐私 里开启"
+          }
+        }
+      }
+    },
+    "record.voice.start": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictate"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音输入"
+          }
+        }
+      }
+    },
+    "record.voice.stop": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
           }
         }
       }
@@ -4990,6 +5109,16 @@
         }
       }
     },
+    "related.picker.currentSize %@ %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "related.picker.currentSize %1$@ %2$@"
+          }
+        }
+      }
+    },
     "related.picker.currentSize %lld %lld": {
       "comment": "Phase 53: header showing how many items are already in the source's group. %1 = current count, %2 = 8.",
       "localizations": {
@@ -5092,6 +5221,7 @@
         }
       }
     },
+    "related.picker.willMerge %@": {},
     "related.picker.willMerge %lld": {
       "comment": "Phase 53: warning chip on a candidate that's already in another group. %1 = size of that other group.",
       "localizations": {
@@ -5122,6 +5252,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未关联其它物品。一组最多 8 件。"
+          }
+        }
+      }
+    },
+    "related.section.title %@ %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "related.section.title %1$@ %2$@"
           }
         }
       }
@@ -6010,6 +6150,125 @@
         }
       }
     },
+    "settings.backup.done": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backed up to iCloud Drive"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已备份到 iCloud 云盘"
+          }
+        }
+      }
+    },
+    "settings.backup.failed": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup failed — make sure you're signed in to iCloud with iCloud Drive on"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份失败 —— 请确认已登录 iCloud 并开启 iCloud 云盘"
+          }
+        }
+      }
+    },
+    "settings.backup.footer": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On quit, all data (JSON, photos included) is automatically backed up to the \"Whereabouts\" folder in iCloud Drive. You can find it in Files / Finder, and use it to import on another device."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出 app 时自动把全部数据(JSON,含照片)备份到 iCloud 云盘的「Whereabouts」文件夹;在「文件」app / 访达的 iCloud 云盘里能看到,也可以用它在设备间手动导入。"
+          }
+        }
+      }
+    },
+    "settings.backup.last %@": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次备份:%@"
+          }
+        }
+      }
+    },
+    "settings.backup.never": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No backup yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未备份"
+          }
+        }
+      }
+    },
+    "settings.backup.now": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Now"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即备份"
+          }
+        }
+      }
+    },
+    "settings.backup.row": {
+      "comment": "Phase 117.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive Backup"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud 云盘备份"
+          }
+        }
+      }
+    },
     "settings.data.clear": {
       "comment": "Settings: clear-all-data button.",
       "localizations": {
@@ -6129,6 +6388,7 @@
         }
       }
     },
+    "settings.data.export.confirm.message %@": {},
     "settings.data.export.confirm.message %lld": {
       "comment": "",
       "localizations": {
@@ -6913,6 +7173,7 @@
     },
     "settings.locations.delete.tooltip.blocked": {
       "comment": "",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -6930,6 +7191,7 @@
     },
     "settings.locations.delete.tooltip.canDelete": {
       "comment": "",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -6964,6 +7226,7 @@
     },
     "settings.locations.footer": {
       "comment": "",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -6981,6 +7244,7 @@
     },
     "settings.locations.header %lld": {
       "comment": "Section header showing the total Location count.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -7876,6 +8140,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在检测 AI 连接…"
+          }
+        }
+      }
+    },
+    "status.ai.usage %@ %@ %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "status.ai.usage %1$@ %2$@ %3$@"
           }
         }
       }
@@ -9211,6 +9485,7 @@
     },
     "update.alert.button.update": {
       "comment": "Update alert: 'Update <name>' confirm button. %@ = existing item name.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -9245,6 +9520,7 @@
     },
     "update.alert.message": {
       "comment": "Update alert body. %1$@ = existing item name, %2$@ = summary. Step 1 TBD-10.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {

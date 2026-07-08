@@ -34,6 +34,9 @@ struct IOSSettingsView: View {
     @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
     /// 本次会话改过开关 → 显示"重启生效"提示。
     @State private var icloudPrefChanged = false
+    /// Phase 117:iCloud 云盘备份状态。
+    @State private var backupBusy = false
+    @State private var backupResult: Bool?
 
     // 数据导入 / 导出
     @State private var showingExporter = false
@@ -341,6 +344,48 @@ struct IOSSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.green)
             }
+            // Phase 117:iCloud 云盘备份(退后台自动;这里手动 + 上次时间)。
+            HStack {
+                settingsRow(icon: "icloud.and.arrow.up", tint: .blue,
+                            titleKey: "settings.backup.row") {
+                    if let d = CloudBackup.lastBackupDate {
+                        Text("settings.backup.last \(d.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("settings.backup.never")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Button {
+                    backupBusy = true
+                    backupResult = nil
+                    let ctx = modelContext
+                    Task {
+                        let ok = await CloudBackup.backUp(context: ctx)
+                        await MainActor.run {
+                            backupBusy = false
+                            backupResult = ok
+                            if ok { Haptics.success() } else { Haptics.warning() }
+                        }
+                    }
+                } label: {
+                    if backupBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("settings.backup.now").font(.subheadline)
+                    }
+                }
+                .buttonStyle(.borderless)
+                .disabled(backupBusy || items.isEmpty)
+            }
+            if let ok = backupResult {
+                Label(ok ? "settings.backup.done" : "settings.backup.failed",
+                      systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(ok ? .green : .orange)
+            }
             Button(role: .destructive) {
                 showingClearConfirm = true
             } label: {
@@ -353,6 +398,7 @@ struct IOSSettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("settings.data.export.footer")
                 Text("settings.data.import.footer")
+                Text("settings.backup.footer")
             }
         }
     }

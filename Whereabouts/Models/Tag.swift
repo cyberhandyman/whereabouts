@@ -17,10 +17,16 @@ final class Tag {
     /// 创建时间,用于排序(预设是 app launch 时 seed,后加的排末尾)。
     var createdAt: Date = Date.distantPast
 
+    /// 挂载物品存储(CloudKit 兼容,Phase 117;inverse 指向 Item 的**存储**属性)。
+    @Relationship(deleteRule: .nullify, inverse: \Item.tagsStorage)
+    var itemsStorage: [Item]? = []
+
     /// 反向关系:用了这个 tag 的所有 item。
     /// nullify:删 tag 不会删 item(只是清掉这条挂载)。
-    @Relationship(deleteRule: .nullify, inverse: \Item.tags)
-    var items: [Item] = []
+    var items: [Item] {
+        get { itemsStorage ?? [] }
+        set { itemsStorage = newValue }
+    }
 
     init(name: String, colorHex: String, createdAt: Date = .now) {
         self.name = name

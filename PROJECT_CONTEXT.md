@@ -30,6 +30,12 @@
 **数据事故 + 专属库路径(Phase 114,2026-07-07)**:苹果系统进程 `/usr/libexec/icloudmailagent` 会写非沙箱 SwiftData 共用的 `~/Library/Application Support/default.store`,把何处的库覆盖了。macOS 版改用专属路径 `~/Library/Application Support/Whereabouts/whereabouts.store`(WhereaboutsApp.sharedContainer 用 ModelConfiguration(url:),所有 Scene 传同一实例);数据恢复脚本 `Tools/recover_store.sh`(sudo 跑,从 TM 本地快照捞)。**任何非沙箱 SwiftData app 都不要用默认路径**。
 **iOS 首启体验(Phase 115)**:分页引导(IOSOnboardingView,onboardingShown key,设置→关于可重看)+ 首启演示数据(rawInput 标记 `__hechu_demo__`,横幅一键清除)+ 设置里 iCloud"即将推出"占位。
 **GitHub(2026-07-07 起公开)**:主仓库 github.com/cyberhandyman/whereabouts(gitignore 排除 site/、SESSION_TRANSCRIPT.md、.claude/);文档站仓库 cyberhandyman/whereabouts-site。推送用钥匙串里的 HTTPS 凭据。
+**iCloud 双端同步(Phase 116-117,2026-07-08 上线)**:
+- CloudKit 私有库 `iCloud.com.bamcope.whereabouts`,SwiftData cloudKitDatabase(AppContainer 工厂,失败静默回退本地);**CloudKit 硬性要求已满足**:全部属性带默认值、全部关系可选(XxxStorage 可选存储 + 非可选门面,门面同旧名 → 调用点零改动)、LocationLog.location 的反向在 Location.logsStorage。
+- **坑**:①关系不满足要求时 ModelContainer 能创建、**异步 mirror setup 才抛错**(134060 日志);②无 entitlements 的构建(CODE_SIGNING_ALLOWED=NO)运行时 CKContainer **必崩**(SIGTRAP)→ 模拟器构建不要关签名,用默认 "Sign to Run Locally";③模拟器/Desktop 的 derivedData 都放 /tmp(hechu-dd / hechu-dd-sim)避 xattr。
+- iCloud Drive JSON 自动备份(CloudBackup):iOS 退后台 / macOS 退出时写 `iCloud Drive/Whereabouts/whereabouts-backup.json`;设置→数据有"立即备份"。entitlements 加了 CloudDocuments + ubiquity 容器,Info.plist 加 NSUbiquitousContainers。
+- 签名:Team 6893263DW5 已注册本机为开发设备(ASC API);macOS 构建 `-allowProvisioningUpdates`(走 Xcode 登录态;xcodebuild 的 -authenticationKey* 参数对这把 ASC key 反而报 bearer token 错,别用)。
+**Phase 117 其它**:iOS 语音录入(SpeechInput,SFSpeechRecognizer,记一条 tab 麦克风按钮);引导手势页 KeyframeAnimator 循环动画演示(右滑/左滑/长按);作者名改 Chengzhu Zhao;iOS 设置页大标题「J人养成器 - 何处」;名言库 Shared/QuoteBank 双端共用,iOS 首页底部 12s 滚动。付费功能已明确取消,app 永久全免费。
 
 ---
 

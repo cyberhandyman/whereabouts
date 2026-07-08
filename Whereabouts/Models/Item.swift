@@ -69,19 +69,38 @@ final class Item {
     /// SwiftData 轻量迁移:旧记录默认 nil。
     var relatedGroupID: UUID?
 
-    /// 位置历史:这件东西去过哪。倒序就是从最近到最早。
-    /// 删除 item 时连同 logs 一起删(.cascade)。
+    // Phase 117(iCloud):CloudKit 要求**所有关系可选** —— 存储属性改为 Optional,
+    // 对外暴露非可选门面(几十处调用点不用改)。Storage 后缀的属性别直接用。
+
+    /// 位置历史存储(CloudKit 兼容;删除 item 时连同 logs 一起删 .cascade)。
     @Relationship(deleteRule: .cascade, inverse: \LocationLog.item)
-    var locationHistory: [LocationLog] = []
+    var locationHistoryStorage: [LocationLog]? = []
+
+    /// 位置历史:这件东西去过哪。倒序就是从最近到最早。
+    var locationHistory: [LocationLog] {
+        get { locationHistoryStorage ?? [] }
+        set { locationHistoryStorage = newValue }
+    }
+
+    /// 字段编辑历史存储(CloudKit 兼容)。
+    @Relationship(deleteRule: .cascade, inverse: \EditLog.item)
+    var editHistoryStorage: [EditLog]? = []
 
     /// 字段编辑历史(Phase 39):name / model / color / 等字段被改过的前后值 + 来源。
     /// 跟 locationHistory 平行,合并在详情时间线展示。
-    @Relationship(deleteRule: .cascade, inverse: \EditLog.item)
-    var editHistory: [EditLog] = []
+    var editHistory: [EditLog] {
+        get { editHistoryStorage ?? [] }
+        set { editHistoryStorage = newValue }
+    }
 
-    /// 用户挂的标签(多对多)。inverse 写在 Tag 那一侧。
-    /// 删除 item 不删 tag(只是断挂载),反之亦然。
-    @Relationship var tags: [Tag] = []
+    /// 标签存储(CloudKit 兼容;多对多,inverse 写在 Tag 那一侧)。
+    @Relationship var tagsStorage: [Tag]? = []
+
+    /// 用户挂的标签。删除 item 不删 tag(只是断挂载),反之亦然。
+    var tags: [Tag] {
+        get { tagsStorage ?? [] }
+        set { tagsStorage = newValue }
+    }
 
     // MARK: - 置顶(重要物品 + 通知)
     /// 置顶 = 重要 = 想定期收到"它还在原位吗?"提醒。

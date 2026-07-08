@@ -956,6 +956,9 @@ private struct DataSettingsTab: View {
     // Phase 98:导入 / 导出 前的警示 dialog
     @State private var showingExportConfirm = false
     @State private var showingImportConfirm = false
+    // Phase 117:iCloud 云盘备份状态行
+    @State private var backupBusy = false
+    @State private var backupResult: Bool?
 
     var body: some View {
         Form {
@@ -991,6 +994,49 @@ private struct DataSettingsTab: View {
                 }
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+            }
+
+            // Phase 117:iCloud 云盘备份(退出时自动;这里手动 + 显示上次时间)。
+            Section {
+                HStack {
+                    Label("settings.backup.row", systemImage: "icloud.and.arrow.up")
+                    Spacer()
+                    if let d = CloudBackup.lastBackupDate {
+                        Text("settings.backup.last \(d.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("settings.backup.never")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Button {
+                        backupBusy = true
+                        backupResult = nil
+                        let ctx = modelContext
+                        Task {
+                            let ok = await CloudBackup.backUp(context: ctx)
+                            await MainActor.run { backupBusy = false; backupResult = ok }
+                        }
+                    } label: {
+                        if backupBusy {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("settings.backup.now")
+                        }
+                    }
+                    .disabled(backupBusy || items.isEmpty)
+                }
+                if let ok = backupResult {
+                    Label(ok ? "settings.backup.done" : "settings.backup.failed",
+                          systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(ok ? .green : .orange)
+                }
+            } footer: {
+                Text("settings.backup.footer")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
 
             Section {

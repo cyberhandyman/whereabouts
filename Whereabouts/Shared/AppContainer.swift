@@ -28,6 +28,9 @@ enum AppContainer {
     /// 本次启动 CloudKit 是否真的挂上了(容器创建成功)。设置页据此显示状态。
     private(set) static var cloudKitActive = false
 
+    /// CloudKit 起不来时的具体原因(NSLog 进系统日志,诊断用;UI 不直接展示技术细节)。
+    private(set) static var cloudKitStatusDetail: String?
+
     /// 建容器。`storeURL == nil` 用平台默认位置(iOS 沙箱内);
     /// macOS 传专属路径(Phase 114,避开被系统进程污染的共享 default.store)。
     static func make(storeURL: URL?) -> ModelContainer {
@@ -40,11 +43,17 @@ enum AppContainer {
                 cloudConfig = ModelConfiguration(schema: schema,
                                                  cloudKitDatabase: .private(cloudKitContainerID))
             }
-            if let c = try? ModelContainer(for: schema, configurations: cloudConfig) {
+            do {
+                let c = try ModelContainer(for: schema, configurations: cloudConfig)
                 cloudKitActive = true
                 return c
+            } catch {
+                // CloudKit 起不来(未登录 iCloud / 无 entitlement / 存量库迁移问题)
+                // → 记录原因,静默回退本地。
+                cloudKitStatusDetail = String(describing: error)
+                NSLog("[Whereabouts] CloudKit container failed, falling back to local: %@",
+                      String(describing: error))
             }
-            // CloudKit 起不来(未登录 iCloud / 无 entitlement / 网络策略)→ 静默回退本地。
         }
         let localConfig: ModelConfiguration
         if let url = storeURL {

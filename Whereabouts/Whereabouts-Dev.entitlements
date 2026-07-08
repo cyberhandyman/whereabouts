@@ -2,17 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Phase 116:macOS 日常开发版 entitlements —— iCloud 同步,无沙箱。
-         App Store 提交时换 Whereabouts-AppStore.entitlements(含沙箱)。 -->
-    <key>com.apple.developer.icloud-services</key>
-    <array>
-        <string>CloudKit</string>
-    </array>
-    <key>com.apple.developer.icloud-container-identifiers</key>
-    <array>
-        <string>iCloud.com.bamcope.whereabouts</string>
-    </array>
-    <key>com.apple.developer.aps-environment</key>
-    <string>development</string>
+	<key>com.apple.developer.aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.bamcope.whereabouts</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+		<string>CloudDocuments</string>
+	</array>
+	<key>com.apple.developer.ubiquity-container-identifiers</key>
+	<array>
+		<string>iCloud.com.bamcope.whereabouts</string>
+	</array>
 </dict>
 </plist>

@@ -35,6 +35,10 @@ struct IOSRecordView: View {
     /// 无 AI key 时点紫色推荐胶囊 → 弹 AI 设置 sheet。
     @State private var showingAISettings = false
 
+    /// Phase 117:语音输入。识别文本实时追加到 draft(以按下时的内容为基底)。
+    @State private var speech = SpeechInput()
+    @State private var speechBase = ""
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -147,30 +151,62 @@ struct IOSRecordView: View {
                 .buttonStyle(.plain)
             }
 
-            // 提交按钮:品牌渐变整宽;禁用态灰。
-            Button(action: commit) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus.circle.fill")
-                    Text("ios.record.submit")
-                        .font(.headline)
-                    let count = InputParser.parseMultiple(draft).count
-                    if count > 1 {
-                        Text(verbatim: "×\(count)")
-                            .font(.subheadline.weight(.bold))
-                            .monospacedDigit()
-                    }
+            // Phase 117:语音按钮 + 提交按钮一行。录音中麦克风变红并脉动。
+            HStack(spacing: 10) {
+                Button {
+                    Haptics.tap()
+                    if !speech.isRecording { speechBase = draft }
+                    speech.toggle()
+                } label: {
+                    Image(systemName: speech.isRecording ? "stop.fill" : "mic.fill")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 52, height: 48)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                .fill(speech.isRecording ? AnyShapeStyle(Color.red)
+                                                         : AnyShapeStyle(IOSTheme.accent.opacity(0.13)))
+                        )
+                        .foregroundStyle(speech.isRecording ? .white : IOSTheme.accent)
+                        .symbolEffect(.pulse, isActive: speech.isRecording)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(canSubmit ? AnyShapeStyle(IOSTheme.gradient)
-                                        : AnyShapeStyle(Color.secondary.opacity(0.2)))
-                )
-                .foregroundStyle(canSubmit ? .white : .secondary)
+                .buttonStyle(.plain)
+                .accessibilityLabel(speech.isRecording ? Text("record.voice.stop") : Text("record.voice.start"))
+
+                Button(action: commit) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("ios.record.submit")
+                            .font(.headline)
+                        let count = InputParser.parseMultiple(draft).count
+                        if count > 1 {
+                            Text(verbatim: "×\(count)")
+                                .font(.subheadline.weight(.bold))
+                                .monospacedDigit()
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .fill(canSubmit ? AnyShapeStyle(IOSTheme.gradient)
+                                            : AnyShapeStyle(Color.secondary.opacity(0.2)))
+                    )
+                    .foregroundStyle(canSubmit ? .white : .secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSubmit)
             }
-            .buttonStyle(.plain)
-            .disabled(!canSubmit)
+            .onChange(of: speech.transcript) { _, new in
+                guard speech.isRecording else { return }
+                // 识别结果实时接到按下录音时的草稿后面
+                let sep = speechBase.isEmpty || speechBase.hasSuffix("\n") ? "" : " "
+                draft = speechBase + (new.isEmpty ? "" : sep + new)
+            }
+            if speech.permissionDenied {
+                Label("record.voice.denied", systemImage: "mic.slash")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
 
             if let savedAck {
                 Label(savedAck, systemImage: "checkmark.circle.fill")

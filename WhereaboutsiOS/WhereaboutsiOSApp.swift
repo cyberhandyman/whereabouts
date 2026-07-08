@@ -39,6 +39,10 @@ struct IOSRootView: View {
     enum Tab: Hashable { case items, record, settings }
     @State private var tab: Tab = .items
 
+    /// Phase 117:退到后台时自动往 iCloud 云盘写一份 JSON 备份。
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
     /// Phase 115:首次启动引导。看完(或跳过)置 true,永不再弹;
     /// 设置 → 关于 → 重看使用引导 可以把它清掉重看。
     @AppStorage("onboardingShown") private var onboardingShown: Bool = false
@@ -54,6 +58,13 @@ struct IOSRootView: View {
             IOSSettingsView()
                 .tabItem { Label("ios.tab.settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
+        }
+        // Phase 117:退后台 → 自动备份 JSON 到 iCloud 云盘(静默,失败无感)。
+        .onChange(of: scenePhase) { _, new in
+            if new == .background {
+                let ctx = modelContext
+                Task { _ = await CloudBackup.backUp(context: ctx) }
+            }
         }
         // Phase 115:首次启动全屏引导。fullScreenCover 盖在 TabView 上,
         // 看完写 onboardingShown,之后每次启动直接进列表。

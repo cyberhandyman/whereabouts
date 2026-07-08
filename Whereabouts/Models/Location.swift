@@ -20,13 +20,32 @@ final class Location {
     var name: String = ""
     var parent: Location?
 
-    /// 反向关系:这个位置下属的子位置。
+    // Phase 117(iCloud):CloudKit 要求所有关系可选 —— Optional 存储 + 非可选门面。
+
+    /// 子位置存储(CloudKit 兼容)。
     @Relationship(deleteRule: .cascade, inverse: \Location.parent)
-    var children: [Location] = []
+    var childrenStorage: [Location]? = []
+
+    /// 反向关系:这个位置下属的子位置。
+    var children: [Location] {
+        get { childrenStorage ?? [] }
+        set { childrenStorage = newValue }
+    }
+
+    /// 直属物品存储(CloudKit 兼容)。
+    @Relationship(deleteRule: .nullify, inverse: \Item.location)
+    var itemsStorage: [Item]? = []
 
     /// 这个位置直接放着的物品(不包含子位置里的)。
-    @Relationship(deleteRule: .nullify, inverse: \Item.location)
-    var items: [Item] = []
+    var items: [Item] {
+        get { itemsStorage ?? [] }
+        set { itemsStorage = newValue }
+    }
+
+    /// 指向本位置的历史记录(Phase 117 新增 —— CloudKit 要求 LocationLog.location
+    /// 必须有反向关系;删除位置时把 log 的指针清空,历史时间点保留)。
+    @Relationship(deleteRule: .nullify, inverse: \LocationLog.location)
+    var logsStorage: [LocationLog]? = []
 
     init(name: String, parent: Location? = nil) {
         self.name = name

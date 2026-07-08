@@ -1,2 +1,4 @@
 /* iOS 显示名 —— 中文 */
 "CFBundleDisplayName" = "何处";
+"NSMicrophoneUsageDescription" = "「何处」在语音录入物品时使用麦克风。";
+"NSSpeechRecognitionUsageDescription" = "「何处」把你的语音转成文字用于录入物品。";

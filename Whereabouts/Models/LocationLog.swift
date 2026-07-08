@@ -9,8 +9,8 @@ final class LocationLog {
     var recordedAt: Date = Date.distantPast
 
     /// 当时所在位置;nil = 未指定。
-    /// nullify:位置被删除时这条 log 不跟着消失,只是把指针清空(保留历史时间点)。
-    @Relationship(deleteRule: .nullify)
+    /// Phase 117:反向关系(CloudKit 必需)声明在 Location.logsStorage 一侧;
+    /// 位置被删除时这条 log 不跟着消失,只是指针被清空(保留历史时间点)。
     var location: Location?
 
     /// 所属物品(反向关系由 Item.locationHistory 那边声明)。
