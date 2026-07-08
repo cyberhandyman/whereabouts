@@ -3,6 +3,29 @@ import Foundation
 // Phase 111(iOS 版):录入流程的三个"待用户决定"数据结构,从 ContentView.swift 挪到这里 ——
 // macOS 主窗口和 iOS "记一条" tab 共用同一套录入决策语义(重复检测 / 字段更新意图 / 同名叶子消歧)。
 
+/// 多选状态下用户选中的批量动作 —— sheet 用它区分应该弹哪一种。
+/// 同时携带本次操作要影响的 Item 列表(在用户点菜单时就快照,避免 selection 后续变动)。
+/// Phase 119 起 macOS / iOS 共用。
+enum BatchEditTarget: Identifiable {
+    case tags(items: [Item])
+    case location(items: [Item])
+    case source(items: [Item])
+
+    var id: String {
+        switch self {
+        case .tags:     return "tags"
+        case .location: return "location"
+        case .source:   return "source"
+        }
+    }
+
+    var items: [Item] {
+        switch self {
+        case .tags(let i), .location(let i), .source(let i): return i
+        }
+    }
+}
+
 /// Phase 17:用户给的单段位置("抽屉第一层")在库里有多个同名叶子,等用户挑一个。
 /// candidates 里的每个 Location 通过 `loc.path` 自身展开成完整祖先链给用户看。
 struct PendingAmbiguousLocation: Identifiable {

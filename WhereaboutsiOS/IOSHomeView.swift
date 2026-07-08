@@ -57,6 +57,10 @@ struct IOSHomeView: View {
     @State private var multiSelection: Set<PersistentIdentifier> = []
     /// 多选删除确认。
     @State private var showingBulkDelete = false
+    /// Phase 119:批量编辑 sheet(标签 / 位置 / 渠道,复用 macOS 三件套)。
+    @State private var batchEdit: BatchEditTarget?
+    /// 批量操作回执 toast。
+    @State private var batchAck: String?
 
     // MARK: - 派生
 
@@ -152,74 +156,64 @@ struct IOSHomeView: View {
                     }
                     .disabled(items.isEmpty && editMode == .inactive)
                 }
-                // Phase 118:记一条(直达录入 tab)
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Haptics.tap()
-                        onCompose()
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                    }
-                    .accessibilityLabel(Text("ios.toolbar.compose"))
-                }
-                // Phase 118:iCloud 手动同步(开关开着才显示)
-                if icloudSyncEnabled {
+                // Phase 118/119:普通模式 = 记一条 + 同步;多选模式两者隐藏,
+                // 只留 ⋯(强调色)装 macOS 同款批量菜单。
+                if editMode != .active {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            guard !syncing else { return }
-                            syncing = true
-                            let ctx = modelContext
-                            Task {
-                                let r = await CloudBackup.sync(context: ctx)
-                                await MainActor.run {
-                                    syncing = false
-                                    flashSyncResult(r)
+                            Haptics.tap()
+                            onCompose()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                        }
+                        .accessibilityLabel(Text("ios.toolbar.compose"))
+                    }
+                    if icloudSyncEnabled {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                guard !syncing else { return }
+                                syncing = true
+                                let ctx = modelContext
+                                Task {
+                                    let r = await CloudBackup.sync(context: ctx)
+                                    await MainActor.run {
+                                        syncing = false
+                                        flashSyncResult(r)
+                                    }
+                                }
+                            } label: {
+                                if syncing {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath.icloud")
                                 }
                             }
-                        } label: {
-                            if syncing {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Image(systemName: "arrow.triangle.2.circlepath.icloud")
-                            }
+                            .accessibilityLabel(Text("ios.toolbar.syncNow"))
                         }
-                        .accessibilityLabel(Text("ios.toolbar.syncNow"))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Picker(selection: $sortMode) {
-                            ForEach(SortMode.allCases) { mode in
-                                Label(mode.displayKey, systemImage: mode.systemImage).tag(mode)
+                        if editMode == .active {
+                            batchMenu
+                        } else {
+                            Picker(selection: $sortMode) {
+                                ForEach(SortMode.allCases) { mode in
+                                    Label(mode.displayKey, systemImage: mode.systemImage).tag(mode)
+                                }
+                            } label: {
+                                Text("sort.menu.label")
                             }
-                        } label: {
-                            Text("sort.menu.label")
-                        }
-                        Divider()
-                        Button {
-                            showingTrash = true
-                        } label: {
-                            Label("trash.toolbar.label", systemImage: "archivebox")
+                            Divider()
+                            Button {
+                                showingTrash = true
+                            } label: {
+                                Label("trash.toolbar.label", systemImage: "archivebox")
+                            }
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-                // 多选模式底部:选中数 + 批量删除
-                if editMode == .active {
-                    ToolbarItem(placement: .bottomBar) {
-                        HStack {
-                            Text("bulk.delete.label \(multiSelection.count)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button(role: .destructive) {
-                                showingBulkDelete = true
-                            } label: {
-                                Label("action.delete", systemImage: "trash")
-                            }
-                            .disabled(multiSelection.isEmpty)
-                        }
+                        Image(systemName: editMode == .active ? "ellipsis.circle.fill" : "ellipsis.circle")
+                            .foregroundStyle(editMode == .active ? IOSTheme.accent : Color.primary)
                     }
                 }
             }
@@ -231,9 +225,8 @@ struct IOSHomeView: View {
                             item.markDeleted()
                         }
                     }
-                    multiSelection.removeAll()
-                    withAnimation(.snappy) { editMode = .inactive }
                     Haptics.warning()
+                    exitEditMode()
                 }
                 Button("action.cancel", role: .cancel) {}
             } message: {
@@ -243,6 +236,29 @@ struct IOSHomeView: View {
         .searchable(text: Binding(get: { filter.search }, set: { filter.search = $0 }),
                     prompt: Text("filter.search.placeholder"))
         .sheet(item: $editingItem) { ItemEditView(item: $0) }
+        // Phase 119:批量编辑三件套(与 macOS 完全同款 sheet)
+        .sheet(item: $batchEdit) { target in
+            switch target {
+            case .tags(let its):
+                BatchTagsSheet(items: its) { count, tagCount in
+                    Haptics.success()
+                    flashBatchAck(String(localized: "batch.ack.tagsAdded \(count) \(tagCount)"))
+                    exitEditMode()
+                }
+            case .location(let its):
+                BatchLocationSheet(items: its) { count in
+                    Haptics.success()
+                    flashBatchAck(String(localized: "batch.ack.locationSet \(count)"))
+                    exitEditMode()
+                }
+            case .source(let its):
+                BatchSourceSheet(items: its) { count in
+                    Haptics.success()
+                    flashBatchAck(String(localized: "batch.ack.sourceSet \(count)"))
+                    exitEditMode()
+                }
+            }
+        }
         .sheet(item: $lentSheetItem) { item in
             IOSLentSheet(item: item)
                 .presentationDetents([.height(300)])
@@ -278,6 +294,10 @@ struct IOSHomeView: View {
             if CommandLine.arguments.contains("--open-first") {
                 try? await Task.sleep(for: .seconds(0.8))
                 autoOpenFirst = true
+            }
+            if CommandLine.arguments.contains("--edit-mode") {
+                try? await Task.sleep(for: .seconds(0.5))
+                editMode = .active
             }
             #endif
         }
@@ -315,6 +335,17 @@ struct IOSHomeView: View {
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.cyan)
+                    .listRowStyleClear()
+                    .transition(.opacity)
+                }
+                if let batchAck {
+                    Label {
+                        Text(verbatim: batchAck)
+                    } icon: {
+                        Image(systemName: "checkmark.circle.fill")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.green)
                     .listRowStyleClear()
                     .transition(.opacity)
                 }
@@ -359,6 +390,107 @@ struct IOSHomeView: View {
             guard icloudSyncEnabled else { return }
             let r = await CloudBackup.sync(context: modelContext)
             flashSyncResult(r)
+        }
+    }
+
+    // MARK: - Phase 119:多选批量菜单(对齐 macOS toolbarBatchMenu)
+
+    /// 把当前多选解成 Item 快照 —— 点菜单瞬间锁定,selection 后续变化不影响 sheet。
+    private func selectedItemsSnapshot() -> [Item] {
+        items.filter { multiSelection.contains($0.persistentModelID) }
+    }
+
+    /// 批量菜单:设标签 / 设位置 / 设渠道 / 标记见过 / 标记不知道在哪 / AI 理解 / 删除。
+    @ViewBuilder
+    private var batchMenu: some View {
+        let count = multiSelection.count
+        Section("bulk.delete.label \(count)") {
+            Button {
+                batchEdit = .tags(items: selectedItemsSnapshot())
+            } label: {
+                Label("batch.menu.setTags", systemImage: "tag")
+            }
+            Button {
+                batchEdit = .location(items: selectedItemsSnapshot())
+            } label: {
+                Label("batch.menu.setLocation", systemImage: "mappin.and.ellipse")
+            }
+            Button {
+                batchEdit = .source(items: selectedItemsSnapshot())
+            } label: {
+                Label("batch.menu.setSource", systemImage: "bag")
+            }
+        }
+        Section {
+            Button(action: batchMarkSeen) {
+                Label("batch.menu.markSeen", systemImage: "checkmark.circle")
+            }
+            Button(action: batchMarkLost) {
+                Label("batch.menu.markLost", systemImage: "questionmark.circle")
+            }
+        }
+        Section {
+            Button {
+                let snapshot = selectedItemsSnapshot()
+                aiRunner.understand(items: snapshot, allTags: allTags, allItems: items, context: modelContext)
+                exitEditMode()
+            } label: {
+                Label("action.aiUnderstand", systemImage: "sparkles")
+            }
+            .disabled(!AISettings.hasActiveKey || multiSelection.isEmpty)
+        }
+        Section {
+            Button(role: .destructive) {
+                showingBulkDelete = true
+            } label: {
+                Label("bulk.delete.label \(count)", systemImage: "trash")
+            }
+            .disabled(multiSelection.isEmpty)
+        }
+    }
+
+    private func exitEditMode() {
+        multiSelection.removeAll()
+        withAnimation(.snappy) { editMode = .inactive }
+    }
+
+    /// 批量标记"最近见过"(同 macOS batchMarkSeen)。
+    private func batchMarkSeen() {
+        let targets = selectedItemsSnapshot()
+        guard !targets.isEmpty else { return }
+        for item in targets {
+            item.lastSeenAt = .now
+            item.updatedAt = .now
+            item.lastActionType = "stillThere"
+            modelContext.insert(LocationLog(recordedAt: .now, location: item.location, item: item))
+        }
+        NotificationScheduler.shared.rescheduleIfEnabled()
+        Haptics.success()
+        flashBatchAck(String(localized: "batch.ack.markedSeen \(targets.count)"))
+        exitEditMode()
+    }
+
+    /// 批量标记"不知道在哪"(同 macOS batchMarkLost)。
+    private func batchMarkLost() {
+        let targets = selectedItemsSnapshot()
+        guard !targets.isEmpty else { return }
+        for item in targets {
+            item.location = nil
+            item.lastSeenAt = .now
+            item.updatedAt = .now
+            item.lastActionType = "unknown"
+            modelContext.insert(LocationLog(recordedAt: .now, location: nil, item: item))
+        }
+        Haptics.success()
+        flashBatchAck(String(localized: "batch.ack.markedLost \(targets.count)"))
+        exitEditMode()
+    }
+
+    private func flashBatchAck(_ msg: String) {
+        withAnimation(.snappy) { batchAck = msg }
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            await MainActor.run { withAnimation { if batchAck == msg { batchAck = nil } } }
         }
     }
 

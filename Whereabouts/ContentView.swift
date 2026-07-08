@@ -2282,27 +2282,7 @@ struct ContentView: View {
     }
 }
 
-/// 多选状态下用户选中的批量动作 —— sheet 用它区分应该弹哪一种。
-/// 同时携带本次操作要影响的 Item 列表(在用户点菜单时就快照,避免 selection 后续变动)。
-enum BatchEditTarget: Identifiable {
-    case tags(items: [Item])
-    case location(items: [Item])
-    case source(items: [Item])
-
-    var id: String {
-        switch self {
-        case .tags:     return "tags"
-        case .location: return "location"
-        case .source:   return "source"
-        }
-    }
-
-    var items: [Item] {
-        switch self {
-        case .tags(let i), .location(let i), .source(let i): return i
-        }
-    }
-}
+// Phase 119:BatchEditTarget 挪到 Shared/RecordFlow.swift —— iOS 多选批量编辑复用。
 
 // Phase 111:PendingAmbiguousLocation / PendingUpdate / PendingDuplicate
 // 挪到 Shared/RecordFlow.swift —— iOS 的"记一条"页复用同一套录入决策数据结构。
