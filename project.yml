@@ -16,14 +16,25 @@ knownRegions:
   - en
   - Base
 
+# Phase 121:三个构建配置 ——
+#   Debug    日常调试 / 模拟器
+#   Release  日常本机部署(macOS 无沙箱,数据在 ~/Library/Application Support/Whereabouts/)
+#   AppStore 提交商店专用(= Release + macOS 换沙箱 entitlements)
+configs:
+  Debug: debug
+  Release: release
+  AppStore: release
+
 settings:
   # 本机 xcodegen 缺 SettingPresets → Debug/Release 的默认编译条件不会自动写入,
   # 这里显式补上,否则 `#if DEBUG` 在 Debug 构建里也是 false。
   configs:
-    debug:
+    Debug:
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
       SWIFT_OPTIMIZATION_LEVEL: "-Onone"
-    release:
+    Release:
+      SWIFT_COMPILATION_MODE: wholemodule
+    AppStore:
       SWIFT_COMPILATION_MODE: wholemodule
   base:
     SWIFT_VERSION: "5.10"
@@ -41,12 +52,36 @@ settings:
 #   - WhereaboutsiOS  → iOS(全新 UI;复用 Models / Parsing / AI / Shared 层)
 # 两个 target 用同一个 bundle id —— App Store 的 universal purchase 要求
 # iOS / macOS 共用 bundle id 挂在同一条 App record 下。
+# Phase 121:显式 scheme —— Archive 用 AppStore 配置(沙箱/正式 entitlements),
+# Run 保持 Debug/Release 日常行为。这样在 Xcode 里 Product → Archive 就是提交版。
+schemes:
+  Whereabouts:
+    build:
+      targets:
+        Whereabouts: all
+    run:
+      config: Debug
+    archive:
+      config: AppStore
+  WhereaboutsiOS:
+    build:
+      targets:
+        WhereaboutsiOS: all
+    run:
+      config: Debug
+    archive:
+      config: AppStore
+
 targets:
   Whereabouts:
     type: application
     platform: macOS
     sources:
+      # AppIcon.icns 排除:图标改由资产目录编译(App Store 校验需要),
+      # 两路都出 AppIcon.icns 会撞名。
       - path: Whereabouts
+        excludes:
+          - "AppIcon.icns"
       # 把 docs/*.md 当作 bundle resource,Help 窗口运行时用 Bundle.main.url 加载渲染。
       - path: docs
         type: folder
@@ -58,9 +93,14 @@ targets:
         PRODUCT_NAME: Whereabouts
         PRODUCT_BUNDLE_IDENTIFIER: com.bamcope.whereabouts
         INFOPLIST_FILE: Whereabouts/Info.plist
+        # 图标走资产目录(mac 全尺寸 Phase 121 加入)。
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Phase 116:日常开发版 entitlements(iCloud,无沙箱)。
-        # App Store 提交时换成 Whereabouts-AppStore.entitlements(含沙箱)。
         CODE_SIGN_ENTITLEMENTS: Whereabouts/Whereabouts-Dev.entitlements
+      configs:
+        AppStore:
+          # 提交 App Store:沙箱 + iCloud + production aps。
+          CODE_SIGN_ENTITLEMENTS: Whereabouts/Whereabouts-AppStore.entitlements
 
   WhereaboutsiOS:
     type: application

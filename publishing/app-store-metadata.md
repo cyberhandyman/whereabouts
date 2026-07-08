@@ -127,13 +127,29 @@ see the privacy policy. A demo requires no account: just type e.g.
 - 每平台 1–10 张;建议 4–6 张:首页(有数据)/ 记一条 / 详情 / AI 设置 / 深色模式
 - iOS 模拟器拍图:DEBUG 构建支持 `--demo-data`、`--open-first`、`--tab-record`、`--tab-settings` 启动参数
 
-## 上架前 checklist
+## 上架前 checklist(2026-07-08 体检后更新)
 
-- [ ] Apple Developer 注册通过,project.yml 填 DEVELOPMENT_TEAM
-- [ ] macOS target 挂 Whereabouts-AppStore.entitlements(沙箱)→ 自己的旧数据先导出再导入
-- [ ] (建议)AI/Keychain.swift 换回真 Keychain 存储
-- [ ] 两个 claude.ai 文档 artifact 已设为公开分享
-- [ ] App record 建好(iOS 建 → Add Platform 加 macOS)
-- [ ] 截图各平台就位;隐私问卷选 Data Not Collected
-- [ ] 首发销售范围去掉中国大陆(ICP 备案后再加)
-- [ ] TestFlight 自测通过后 Submit for Review
+**工程侧已全部就绪(Claude 已做):**
+- [x] Team 6893263DW5 已配,本机已注册开发设备
+- [x] API key 存储换回真 Keychain(数据保护钥匙串,旧明文自动迁移)
+- [x] PrivacyInfo.xcprivacy 隐私清单(双 target;零收集,UserDefaults CA92.1)
+- [x] ITSAppUsesNonExemptEncryption=false(双平台 Info.plist)
+- [x] macOS 图标进资产目录(全尺寸,App Store 校验需要)
+- [x] AppStore 构建配置(macOS 带沙箱 entitlements);Xcode Product→Archive 默认即 AppStore 配置
+- [x] 双平台 archive 冒烟通过(沙箱/iCloud/aps entitlements + 隐私清单已验证在包内)
+- [x] 截图:iPhone 6.9"(1320×2868)5 张 + iPad 13"(2064×2752)3 张 → publishing/screenshots/
+
+**你要做的(按顺序):**
+- [ ] ①(关键)CloudKit schema 部署到生产:icloud.developer.apple.com → 容器 iCloud.com.bamcope.whereabouts → 左下 Deploy Schema Changes → 确认。不做这步,商店版用户同步会静默失败!
+- [ ] ② App Store Connect 建 App(iOS)→ 左侧 Add Platform 加 macOS(同一条 record = universal purchase)
+- [ ] ③ 贴元数据(本文件上方)+ 上传截图;macOS 截图手动拍:app 里记几条数据 → ⇧⌘4+空格 拍窗口 → `sips -z 1800 2880 截图.png` 缩放到 2880×1800
+- [ ] ④ App 隐私问卷全选「不收集数据」;年龄分级问卷全答"无"→ 4+
+- [ ] ⑤ 首发销售范围去掉中国大陆(ICP 备案后再加)
+- [ ] ⑥ Xcode 里 scheme 选 WhereaboutsiOS → Any iOS Device → Product→Archive → Organizer 弹出 → Distribute App → App Store Connect → Upload(全默认;首次会自动建 Distribution 证书)。scheme 切 Whereabouts → Any Mac → 同样操作
+- [ ] ⑦ TestFlight 真机自测(重点:两台设备 iCloud 同步、AI 配置、导入导出)
+- [ ] ⑧ 两个平台各自版本页:选构建 → 贴审核备注(上方 App Review Notes)→ Submit for Review
+
+**注意事项:**
+- 商店沙箱版数据目录与你本机开发版不同 —— 你自己装商店版后,数据靠 iCloud 同步自动回来(或云盘 JSON 导入),新用户无感
+- iOS entitlements 里 aps-environment=development 无需手改,Archive 导出时 Xcode 自动换 production
+- 上传后处理需 10-30 分钟才出现在 TestFlight
