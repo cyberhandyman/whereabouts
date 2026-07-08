@@ -34,8 +34,12 @@ settings:
       SWIFT_OPTIMIZATION_LEVEL: "-Onone"
     Release:
       SWIFT_COMPILATION_MODE: wholemodule
+      # 缺 SettingPresets 的 xcodegen 不会自动带这项 → archive 没有 dSYM,
+      # 上传时报 "Upload Symbols Failed"(无害警告,但补上崩溃日志才可读)。
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
     AppStore:
       SWIFT_COMPILATION_MODE: wholemodule
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
   base:
     SWIFT_VERSION: "5.10"
     # Phase 116:Bam 的 Apple Developer 个人团队(2026-07-08 审核通过)。

@@ -37,6 +37,7 @@
     },
     "about.credits.email" : {
       "comment" : "About panel credits line 2 — followed by the email which gets a mailto: link.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -542,6 +543,7 @@
     },
     "app.name" : {
       "comment" : "Long-form brand title shown as the navigation title. CFBundleDisplayName / CFBundleName (controlling Dock / Spotlight) keep the short name 何处 / Whereabouts via the .lproj/InfoPlist.strings files.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -766,6 +768,7 @@
     },
     "batch.menu.lent.out.ack %@" : {
       "comment" : "Toast after marking lent via context menu.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -783,6 +786,7 @@
     },
     "batch.menu.lent.returned.ack" : {
       "comment" : "Toast after marking returned via context menu.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1189,6 +1193,7 @@
     },
     "bulk.delete.tooltip" : {
       "comment" : "Tooltip on the bulk delete toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1326,6 +1331,7 @@
     },
     "detail.button.edit.tooltip" : {
       "comment" : "Detail page header: tooltip on the pencil/edit icon button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1504,6 +1510,7 @@
     },
     "detail.history.restoreName.tooltip" : {
       "comment" : "Phase 69: tooltip on the ↩ restore button explaining what it does.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1538,6 +1545,7 @@
     },
     "detail.lent.ack.lentOut %@" : {
       "comment" : "Toast after marking lent out. 1=borrower name.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1742,6 +1750,7 @@
     },
     "detail.photo.tooltip" : {
       "comment" : "Tooltip on the photo banner — hint that clicking opens the full-size view.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2630,6 +2639,7 @@
     },
     "export.button" : {
       "comment" : "Toolbar button to export all items as JSON.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2647,6 +2657,7 @@
     },
     "export.button.tooltip" : {
       "comment" : "Tooltip on the Export toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2783,6 +2794,7 @@
     },
     "filter.facets.toggle.tooltip" : {
       "comment" : "Phase 46: Tooltip on the chevron button beside the search field that expands the 4 facet rows.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2800,6 +2812,7 @@
     },
     "filter.lent.home" : {
       "comment" : "Phase 104: Facet chip label for items currently at home (not lent).",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2817,6 +2830,7 @@
     },
     "filter.lent.out" : {
       "comment" : "Phase 104: Facet chip label for items currently lent out.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2869,6 +2883,7 @@
     },
     "help.menu.label" : {
       "comment" : "Help menu item that opens the help window. macOS adds an underscore-shortcut automatically.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2886,6 +2901,7 @@
     },
     "help.window.title" : {
       "comment" : "Help window title.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3385,6 +3401,7 @@
     },
     "input.textField.placeholder" : {
       "comment" : "Natural-language input placeholder. Step 1 TBD-1. Note: the InputParser is currently Chinese-only — English input falls through to the name field unparsed (planned LLM-based English parsing post-Phase 7).",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3402,6 +3419,7 @@
     },
     "inspector.placeholder.empty" : {
       "comment" : "Inspector placeholder when nothing is selected.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3419,6 +3437,7 @@
     },
     "inspector.placeholder.multi %lld" : {
       "comment" : "Inspector placeholder when multiple items selected. %lld = count.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -3862,6 +3881,7 @@
     },
     "menu.openMain" : {
       "comment" : "Menubar popover: 'Open main window' button — brings the ContentView window forward.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3947,6 +3967,7 @@
     },
     "meta.label.lent" : {
       "comment" : "Phase 104: Facet row label for the lent-status row — two chips: lent out / at home.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3964,6 +3985,7 @@
     },
     "meta.label.location" : {
       "comment" : "Phase 77 changed semantics: Facet row label for the sub-location row — values are full paths of non-root Locations (e.g. '书房 > 抽屉第一层'). Matches item.location.path exactly.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4032,6 +4054,7 @@
     },
     "meta.label.room" : {
       "comment" : "Phase 77: Facet row label for the room row — values are root-level Location names ('书房', '客厅'). Selecting a room filters items to that entire subtree.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4100,6 +4123,7 @@
     },
     "migrate.dedupRoots.toast %lld" : {
       "comment" : "Phase 76: bottom toast shown once on launch after merging duplicate root locations.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4726,6 +4750,7 @@
     },
     "quickEntry.commit" : {
       "comment" : "Submit button in the quick-entry window.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4743,6 +4768,7 @@
     },
     "quickEntry.footer" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4760,6 +4786,7 @@
     },
     "quickEntry.footer.search" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4795,6 +4822,7 @@
     },
     "quickEntry.mode.record" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4812,6 +4840,7 @@
     },
     "quickEntry.mode.search" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4846,6 +4875,7 @@
     },
     "quickEntry.placeholder.search" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4863,6 +4893,7 @@
     },
     "quickEntry.search.commit" : {
       "comment" : "Submit button in quick-entry search mode.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4880,6 +4911,7 @@
     },
     "quickEntry.title" : {
       "comment" : "Header inside the quick entry window.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4897,6 +4929,7 @@
     },
     "quickEntry.title.search" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4914,6 +4947,7 @@
     },
     "quickEntry.window.title" : {
       "comment" : "Title of the global hotkey popup window.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4983,6 +5017,7 @@
     },
     "refresh.button.apply" : {
       "comment" : "Refresh suggestion sheet: 'Apply' confirmation button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5017,6 +5052,7 @@
     },
     "refresh.field.name" : {
       "comment" : "Refresh suggestion sheet: field label for the item name suggestion row.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5051,6 +5087,7 @@
     },
     "refresh.navTitle" : {
       "comment" : "Refresh suggestion sheet: navigation title.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5085,6 +5122,7 @@
     },
     "related.ack.linked %@ %@" : {
       "comment" : "Phase 56: toast after successful link from right-click menu. %1 = source name, %2 = target name.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5119,6 +5157,7 @@
     },
     "related.button.add.fullHint" : {
       "comment" : "Phase 54: hover hint when group is at capacity (8/8).",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5136,6 +5175,7 @@
     },
     "related.button.add.tooltip" : {
       "comment" : "Phase 54: hover hint when group still has room.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5255,6 +5295,7 @@
     },
     "related.menu.linkTo" : {
       "comment" : "Phase 56: right-click menu item — opens picker to link this item to another.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6044,6 +6085,7 @@
     },
     "settings.ai.usage.footer.claude" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6078,6 +6120,7 @@
     },
     "settings.ai.usage.footer.other" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6829,6 +6872,7 @@
     },
     "settings.hotkey.capture.prompt" : {
       "comment" : "Shown in the capture button while listening for the next key event.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6880,6 +6924,7 @@
     },
     "settings.hotkey.reset" : {
       "comment" : "",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6897,6 +6942,7 @@
     },
     "settings.hotkey.toggle" : {
       "comment" : "Toggle in General Settings — registers/unregisters the system-wide Option+Command+N hotkey.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7478,6 +7524,7 @@
     },
     "settings.locations.header.tab" : {
       "comment" : "Tab label in Settings for managing the location tree.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7657,6 +7704,7 @@
     },
     "settings.menubar.toggle" : {
       "comment" : "Settings: toggle for menu bar icon visibility.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8275,6 +8323,7 @@
     },
     "sort.menu.tooltip" : {
       "comment" : "Tooltip on the sort toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8999,6 +9048,7 @@
     },
     "status.summary.days %lld" : {
       "comment" : "Status bar: days used since first launch.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -9034,6 +9084,7 @@
     },
     "status.summary.items %lld" : {
       "comment" : "Status bar: total item count.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -9069,6 +9120,7 @@
     },
     "status.summary.rooms %lld" : {
       "comment" : "Status bar: distinct top-level location count.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -9461,6 +9513,7 @@
     },
     "toolbar.button.input" : {
       "comment" : "Toolbar button label: focus the add-item input field.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9478,6 +9531,7 @@
     },
     "toolbar.button.input.tooltip" : {
       "comment" : "Tooltip on the add-input toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9495,6 +9549,7 @@
     },
     "toolbar.button.search" : {
       "comment" : "Toolbar button label: focus the search field.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9512,6 +9567,7 @@
     },
     "toolbar.button.search.tooltip" : {
       "comment" : "Tooltip on the search toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9529,6 +9585,7 @@
     },
     "trash.action.empty" : {
       "comment" : "Trash toolbar: 'Empty Trash' button — permanently deletes everything in trash.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9699,6 +9756,7 @@
     },
     "trash.toolbar.tooltip" : {
       "comment" : "Tooltip on trash toolbar button.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
