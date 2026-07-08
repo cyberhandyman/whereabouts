@@ -6,6 +6,9 @@ import SwiftData
 // 但交互按 iOS 习惯重排:searchable 下拉搜索、左右滑动作、长按菜单、push 详情。
 
 struct IOSHomeView: View {
+    /// Phase 118:右上角「记一条」按钮 → 切到录入 tab(IOSRootView 注入)。
+    var onCompose: () -> Void = {}
+
     @Environment(\.modelContext) private var modelContext
 
     @Query(filter: #Predicate<Item> { !$0.isDeleted },
@@ -42,6 +45,18 @@ struct IOSHomeView: View {
     @AppStorage("demoDataState") private var demoDataState: String = ""
     /// 清除演示数据后的 toast。
     @State private var demoClearedToast = false
+
+    // Phase 118:iCloud 手动同步 + 多选编辑
+    @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
+    /// 同步结果 toast(短暂显示)。
+    @State private var syncToast: String?
+    /// 右上角按钮触发的同步进行中(下拉刷新自带转圈,不用这个)。
+    @State private var syncing = false
+    /// 多选模式 + 选中集合。
+    @State private var editMode: EditMode = .inactive
+    @State private var multiSelection: Set<PersistentIdentifier> = []
+    /// 多选删除确认。
+    @State private var showingBulkDelete = false
 
     // MARK: - 派生
 
@@ -109,6 +124,7 @@ struct IOSHomeView: View {
             .background(IOSTheme.pageBackground)
             // app.name 是 macOS 窗口标题用的长品牌串,手机导航栏放不下 → 用短名。
             .navigationTitle("ios.home.title")
+            .environment(\.editMode, $editMode)
             #if DEBUG
             // 截图 / 验收用:--open-first 自动展示第一件物品详情。
             // 用 fullScreenCover 而非 navigationDestination —— 后者在启动初期
@@ -120,6 +136,56 @@ struct IOSHomeView: View {
             }
             #endif
             .toolbar {
+                // Phase 118:多选(选择/完成)
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.snappy) {
+                            if editMode == .active {
+                                editMode = .inactive
+                                multiSelection.removeAll()
+                            } else {
+                                editMode = .active
+                            }
+                        }
+                    } label: {
+                        editMode == .active ? Text("action.done") : Text("ios.toolbar.select")
+                    }
+                    .disabled(items.isEmpty && editMode == .inactive)
+                }
+                // Phase 118:记一条(直达录入 tab)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Haptics.tap()
+                        onCompose()
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                    .accessibilityLabel(Text("ios.toolbar.compose"))
+                }
+                // Phase 118:iCloud 手动同步(开关开着才显示)
+                if icloudSyncEnabled {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            guard !syncing else { return }
+                            syncing = true
+                            let ctx = modelContext
+                            Task {
+                                let r = await CloudBackup.sync(context: ctx)
+                                await MainActor.run {
+                                    syncing = false
+                                    flashSyncResult(r)
+                                }
+                            }
+                        } label: {
+                            if syncing {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.triangle.2.circlepath.icloud")
+                            }
+                        }
+                        .accessibilityLabel(Text("ios.toolbar.syncNow"))
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker(selection: $sortMode) {
@@ -129,17 +195,49 @@ struct IOSHomeView: View {
                         } label: {
                             Text("sort.menu.label")
                         }
+                        Divider()
+                        Button {
+                            showingTrash = true
+                        } label: {
+                            Label("trash.toolbar.label", systemImage: "archivebox")
+                        }
                     } label: {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingTrash = true
-                    } label: {
-                        Image(systemName: "archivebox")
+                // 多选模式底部:选中数 + 批量删除
+                if editMode == .active {
+                    ToolbarItem(placement: .bottomBar) {
+                        HStack {
+                            Text("bulk.delete.label \(multiSelection.count)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button(role: .destructive) {
+                                showingBulkDelete = true
+                            } label: {
+                                Label("action.delete", systemImage: "trash")
+                            }
+                            .disabled(multiSelection.isEmpty)
+                        }
                     }
                 }
+            }
+            .confirmationDialog("bulk.delete.confirm.title",
+                                isPresented: $showingBulkDelete) {
+                Button("bulk.delete.confirm.button \(multiSelection.count)", role: .destructive) {
+                    for id in multiSelection {
+                        if let item = items.first(where: { $0.persistentModelID == id }) {
+                            item.markDeleted()
+                        }
+                    }
+                    multiSelection.removeAll()
+                    withAnimation(.snappy) { editMode = .inactive }
+                    Haptics.warning()
+                }
+                Button("action.cancel", role: .cancel) {}
+            } message: {
+                Text("bulk.delete.confirm.message \(multiSelection.count)")
             }
         }
         .searchable(text: Binding(get: { filter.search }, set: { filter.search = $0 }),
@@ -194,7 +292,7 @@ struct IOSHomeView: View {
     // MARK: - 列表
 
     private var itemList: some View {
-        List {
+        List(selection: $multiSelection) {
             // 统计瓷砖 + AI 状态 + facet chips:三段都是"透明行",卡片自己带皮肤。
             Section {
                 // Phase 115:演示数据横幅(一次性,清除或"留着"后永不再出现)
@@ -208,6 +306,17 @@ struct IOSHomeView: View {
                         .foregroundStyle(.green)
                         .listRowStyleClear()
                         .transition(.opacity)
+                }
+                if let syncToast {
+                    Label {
+                        Text(verbatim: syncToast)
+                    } icon: {
+                        Image(systemName: "icloud.fill")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.cyan)
+                    .listRowStyleClear()
+                    .transition(.opacity)
                 }
                 statsStrip
                     .listRowStyleClear()
@@ -230,6 +339,7 @@ struct IOSHomeView: View {
                 } else {
                     ForEach(filteredItems) { item in
                         itemRow(item)
+                            .tag(item.persistentModelID)  // 多选模式的选择标识
                             .listRowStyleClear(vertical: 5)
                     }
                 }
@@ -244,6 +354,30 @@ struct IOSHomeView: View {
         .listStyle(.plain)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
+        // Phase 118:下拉刷新 = 从 iCloud 手动同步(开关关着就只是转一下)
+        .refreshable {
+            guard icloudSyncEnabled else { return }
+            let r = await CloudBackup.sync(context: modelContext)
+            flashSyncResult(r)
+        }
+    }
+
+    /// Phase 118:同步结果 toast。合并了 N 条 → 显示条数;0 条 → "同步完成";失败 → 提示。
+    private func flashSyncResult(_ r: (ok: Bool, merged: Int)) {
+        if r.ok || r.merged > 0 { Haptics.success() } else { Haptics.warning() }
+        withAnimation(.snappy) {
+            if r.merged > 0 {
+                syncToast = String(localized: "settings.sync.merged \(r.merged)")
+            } else if r.ok {
+                syncToast = String(localized: "settings.backup.done")
+            } else {
+                syncToast = String(localized: "settings.backup.failed")
+            }
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            await MainActor.run { withAnimation { syncToast = nil } }
+        }
     }
 
     /// 单行卡片:缩略图 + 名字/位置/元数据 + 置顶/借出角标 → push 详情。
@@ -440,7 +574,7 @@ struct IOSHomeView: View {
                 EmptyView()
             }
             Spacer(minLength: 0)
-            Button("status.ai.retest") { checkAIConnection() }
+            Button("status.ai.retest") { checkAIConnection(force: true) }
                 .font(.caption2)
                 .buttonStyle(.borderless)
         }
@@ -673,20 +807,41 @@ struct IOSHomeView: View {
         _ = Location.mergeDuplicateRoots(in: modelContext)
     }
 
-    private func checkAIConnection() {
+    /// Phase 118:AI 连接检测节流 —— 5 分钟内不重测(view 重建 / tab 切回都复用缓存),
+    /// 只有点"重测"按钮才强制。跨 view 实例用 static 存。
+    private static var lastAICheckAt: Date?
+    private static var lastAIStatus: AIConnectionStatus?
+
+    private func checkAIConnection(force: Bool = false) {
         guard let client = AISettings.currentClient() else {
             aiStatus = .notConfigured
+            return
+        }
+        // 节流:5 分钟内直接用上次结果
+        if !force,
+           let last = Self.lastAICheckAt,
+           Date.now.timeIntervalSince(last) < 300,
+           let cached = Self.lastAIStatus {
+            aiStatus = cached
             return
         }
         aiStatus = .testing
         Task {
             do {
                 try await client.testConnection()
-                await MainActor.run { aiStatus = .ready }
+                await MainActor.run {
+                    aiStatus = .ready
+                    Self.lastAICheckAt = .now
+                    Self.lastAIStatus = .ready
+                }
             } catch {
                 let raw = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 let truncated = raw.count > 60 ? String(raw.prefix(60)) + "…" : raw
-                await MainActor.run { aiStatus = .failed(truncated) }
+                await MainActor.run {
+                    aiStatus = .failed(truncated)
+                    Self.lastAICheckAt = .now
+                    Self.lastAIStatus = .failed(truncated)
+                }
             }
         }
     }

@@ -14,8 +14,9 @@ struct AISettingsTab: View {
             introSection
             providerPickerSection
             UsageSection()
-            ClaudeProviderSection()
+            // Phase 118:火山引擎在前(国内主力路线),Claude 在后。
             VolcengineProviderSection()
+            ClaudeProviderSection()
             SharedPromptSection()
         }
         .formStyle(.grouped)
@@ -182,7 +183,11 @@ private struct ClaudeProviderSection: View {
         Task {
             do {
                 try await client.testConnection()
-                await MainActor.run { testResult = .success; testing = false }
+                await MainActor.run {
+                    testResult = .success; testing = false
+                    // Phase 118:配置验证通过 → 自动打开"录入时用 AI 理解"
+                    UserDefaults.standard.set(true, forKey: "useAIOnInput")
+                }
             } catch {
                 await MainActor.run {
                     testResult = .failure(error.localizedDescription)
@@ -210,13 +215,33 @@ private struct VolcengineProviderSection: View {
 
     var body: some View {
         Section {
-            TextField("settings.ai.volc.model.label", text: $model,
-                      prompt: Text(verbatim: "doubao-seed-1-6-250615 或 ep-xxxxx"))
-                .textFieldStyle(.roundedBorder)
-                .onChange(of: model) { _, new in
-                    AISettings.volcModel = new
-                    testResult = nil
+            // Phase 118:模型下拉(推荐置顶)+ 自由输入并存。
+            HStack(spacing: 6) {
+                TextField("settings.ai.volc.model.label", text: $model,
+                          prompt: Text(verbatim: VolcModelPreset.recommended + " 或 ep-xxxxx"))
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: model) { _, new in
+                        AISettings.volcModel = new
+                        testResult = nil
+                    }
+                Menu {
+                    ForEach(VolcModelPreset.all, id: \.id) { preset in
+                        Button {
+                            model = preset.id
+                        } label: {
+                            if preset.id == model {
+                                Label(preset.label, systemImage: "checkmark")
+                            } else {
+                                Text(verbatim: preset.label)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "chevron.up.chevron.down")
                 }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
 
             TextField("settings.ai.endpoint.label", text: $endpoint,
                       prompt: Text(verbatim: AIProvider.volcengine.defaultEndpoint))
@@ -338,7 +363,11 @@ private struct VolcengineProviderSection: View {
         Task {
             do {
                 try await client.testConnection()
-                await MainActor.run { testResult = .success; testing = false }
+                await MainActor.run {
+                    testResult = .success; testing = false
+                    // Phase 118:配置验证通过 → 自动打开"录入时用 AI 理解"
+                    UserDefaults.standard.set(true, forKey: "useAIOnInput")
+                }
             } catch {
                 await MainActor.run {
                     testResult = .failure(error.localizedDescription)

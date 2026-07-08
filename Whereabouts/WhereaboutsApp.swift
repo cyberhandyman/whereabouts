@@ -737,6 +737,21 @@ private struct GeneralSettingsTab: View {
                 Text("settings.appearance.header")
             }
 
+            // Phase 118:完全教程(网页,whereabouts.top)
+            Section {
+                Link(destination: AppLinks.tutorial) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "graduationcap.fill")
+                        Text("settings.tutorial.link")
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .foregroundStyle(Color.accentColor)
+                }
+            }
+
             // Phase 116:iCloud 同步(CloudKit 私有库,双端同一开关语义)。
             Section {
                 Toggle(isOn: $icloudSyncEnabled) {
@@ -956,9 +971,10 @@ private struct DataSettingsTab: View {
     // Phase 98:导入 / 导出 前的警示 dialog
     @State private var showingExportConfirm = false
     @State private var showingImportConfirm = false
-    // Phase 117:iCloud 云盘备份状态行
+    // Phase 117:iCloud 云盘备份状态行(Phase 118 升级为手动同步)
     @State private var backupBusy = false
     @State private var backupResult: Bool?
+    @State private var syncMerged = 0
 
     var body: some View {
         Form {
@@ -1015,8 +1031,13 @@ private struct DataSettingsTab: View {
                         backupResult = nil
                         let ctx = modelContext
                         Task {
-                            let ok = await CloudBackup.backUp(context: ctx)
-                            await MainActor.run { backupBusy = false; backupResult = ok }
+                            // Phase 118:立即同步 = pull(合并去重)+ push
+                            let r = await CloudBackup.sync(context: ctx)
+                            await MainActor.run {
+                                backupBusy = false
+                                backupResult = r.ok
+                                syncMerged = r.merged
+                            }
                         }
                     } label: {
                         if backupBusy {
@@ -1028,10 +1049,19 @@ private struct DataSettingsTab: View {
                     .disabled(backupBusy || items.isEmpty)
                 }
                 if let ok = backupResult {
-                    Label(ok ? "settings.backup.done" : "settings.backup.failed",
-                          systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(ok ? .green : .orange)
+                    Label {
+                        if ok && syncMerged > 0 {
+                            Text("settings.sync.merged \(syncMerged)")
+                        } else if ok {
+                            Text("settings.backup.done")
+                        } else {
+                            Text("settings.backup.failed")
+                        }
+                    } icon: {
+                        Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(ok ? .green : .orange)
                 }
             } footer: {
                 Text("settings.backup.footer")

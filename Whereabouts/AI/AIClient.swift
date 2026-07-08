@@ -6,9 +6,10 @@ import SwiftData
 /// 用户可选的 AI 服务商。
 /// Phase 32 起从单一 Claude 扩到 Claude + 火山引擎。
 /// 同时支持中转站(custom endpoint),所以非官方域名也能跑。
+/// Phase 118:火山引擎排前面(国内用户主力路线;case 顺序即 UI picker 顺序,rawValue 不变)。
 enum AIProvider: String, CaseIterable, Identifiable, Codable {
-    case claude     = "claude"
     case volcengine = "volcengine"
+    case claude     = "claude"
 
     var id: String { rawValue }
 
@@ -26,6 +27,19 @@ enum AIProvider: String, CaseIterable, Identifiable, Codable {
         case .volcengine: return "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
         }
     }
+}
+
+/// 火山引擎(豆包)推荐模型预设(Phase 118)。
+/// model 字段本质是自由字符串(也可填 ep- 接入点),这里只是常用档位的下拉快捷项;
+/// 列表首项 = 推荐默认。版本号跟着火山方舟控制台更新(2026-07 核对)。
+enum VolcModelPreset {
+    static let all: [(id: String, label: String)] = [
+        ("doubao-seed-2-0-lite-260428", "Doubao Seed 2.0 Lite · 推荐:快又便宜 / recommended"),
+        ("doubao-seed-2-1-pro-260628",  "Doubao Seed 2.1 Pro · 更强更准,略贵 / strongest"),
+        ("doubao-seed-1-6-250615",      "Doubao Seed 1.6 · 旧版 / legacy"),
+    ]
+    /// 推荐默认(用户没填过时的占位与一键选择)。
+    static var recommended: String { all[0].id }
 }
 
 /// Claude 模型档位。用户在 Settings 里 picker 选,值是 Anthropic 真实 model ID。

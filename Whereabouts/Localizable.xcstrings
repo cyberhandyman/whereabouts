@@ -3719,6 +3719,74 @@
         }
       }
     },
+    "ios.tags.title": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Tags"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签管理"
+          }
+        }
+      }
+    },
+    "ios.toolbar.compose": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New note"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记一条"
+          }
+        }
+      }
+    },
+    "ios.toolbar.select": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择"
+          }
+        }
+      }
+    },
+    "ios.toolbar.syncNow": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync from iCloud"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 iCloud 同步"
+          }
+        }
+      }
+    },
     "location.unspecified": {
       "comment": "Shared fallback shown when an item has no location set.",
       "localizations": {
@@ -4457,6 +4525,40 @@
         }
       }
     },
+    "onboarding.welcome.icloud.off": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on iCloud Sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启 iCloud 同步"
+          }
+        }
+      }
+    },
+    "onboarding.welcome.icloud.on": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ iCloud Sync is on — devices stay in sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ iCloud 同步已开启 —— 多设备自动互通"
+          }
+        }
+      }
+    },
     "onboarding.welcome.point1": {
       "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
       "extractionState": "stale",
@@ -4771,6 +4873,7 @@
     },
     "record.voice.denied": {
       "comment": "Phase 117.",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5561,13 +5664,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI"
+            "value": "Understand with AI"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI"
+            "value": "用AI理解"
           }
         }
       }
@@ -6151,18 +6254,18 @@
       }
     },
     "settings.backup.done": {
-      "comment": "Phase 117.",
+      "comment": "Phase 118.",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backed up to iCloud Drive"
+            "value": "Sync complete"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已备份到 iCloud 云盘"
+            "value": "同步完成"
           }
         }
       }
@@ -6173,13 +6276,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Backup failed — make sure you're signed in to iCloud with iCloud Drive on"
+            "value": "Sync failed — make sure you're signed in to iCloud with iCloud Drive on"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "备份失败 —— 请确认已登录 iCloud 并开启 iCloud 云盘"
+            "value": "同步失败 —— 请确认已登录 iCloud 并开启 iCloud 云盘"
           }
         }
       }
@@ -6190,13 +6293,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "On quit, all data (JSON, photos included) is automatically backed up to the \"Whereabouts\" folder in iCloud Drive. You can find it in Files / Finder, and use it to import on another device."
+            "value": "Two channels: ① live sync — changes flow between your devices via iCloud automatically; ② manual sync — immediately pulls the data file other devices wrote to iCloud Drive, merges with de-duplication, and writes this device's latest data back (the file lives in iCloud Drive/Whereabouts)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出 app 时自动把全部数据(JSON,含照片)备份到 iCloud 云盘的「Whereabouts」文件夹;在「文件」app / 访达的 iCloud 云盘里能看到,也可以用它在设备间手动导入。"
+            "value": "两条通道:① 实时同步 —— 改动自动经 iCloud 在你的设备间流动;② 手动同步 —— 立即拉取 iCloud 云盘里其它设备写入的数据文件、合并去重,并把本机最新数据写回去(文件在 iCloud 云盘/Whereabouts/,「文件」app 和访达都能看到)。"
           }
         }
       }
@@ -6207,13 +6310,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last backup: %@"
+            "value": "Last sync: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "上次备份:%@"
+            "value": "上次同步:%@"
           }
         }
       }
@@ -6224,13 +6327,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No backup yet"
+            "value": "Not synced yet"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "尚未备份"
+            "value": "尚未同步"
           }
         }
       }
@@ -6241,13 +6344,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back Up Now"
+            "value": "Sync Now"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "立即备份"
+            "value": "立即同步"
           }
         }
       }
@@ -6258,13 +6361,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "iCloud Drive Backup"
+            "value": "Manual Sync"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "iCloud 云盘备份"
+            "value": "手动同步"
           }
         }
       }
@@ -7787,6 +7890,23 @@
         }
       }
     },
+    "settings.sync.merged %lld": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync complete — merged %lld items from your other devices"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步完成,合并了 %lld 条来自其它设备的数据"
+          }
+        }
+      }
+    },
     "settings.tab.data": {
       "comment": "Settings tab: data.",
       "localizations": {
@@ -7953,6 +8073,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "录入完一条物品后,按物品名自动挂上一个预设标签。"
+          }
+        }
+      }
+    },
+    "settings.tutorial.link": {
+      "comment": "Phase 118.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete user guide (web)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "何处使用完全教程(网页)"
           }
         }
       }

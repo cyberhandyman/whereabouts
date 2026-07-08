@@ -37,6 +37,7 @@ struct IOSSettingsView: View {
     /// Phase 117:iCloud 云盘备份状态。
     @State private var backupBusy = false
     @State private var backupResult: Bool?
+    @State private var syncMerged = 0
 
     // 数据导入 / 导出
     @State private var showingExporter = false
@@ -161,6 +162,21 @@ struct IOSSettingsView: View {
             } label: {
                 settingsRow(icon: "circle.lefthalf.filled", tint: .indigo,
                             titleKey: "settings.appearance.label")
+            }
+            // Phase 118:标签管理子页
+            NavigationLink {
+                IOSTagsView()
+            } label: {
+                settingsRow(icon: "tag.fill", tint: .green, titleKey: "ios.tags.title")
+            }
+            // Phase 118:完全教程(网页,whereabouts.top)
+            Link(destination: AppLinks.tutorial) {
+                settingsRow(icon: "graduationcap.fill", tint: .orange,
+                            titleKey: "settings.tutorial.link") {
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         } header: {
             Text("settings.tab.general")
@@ -363,11 +379,13 @@ struct IOSSettingsView: View {
                     backupResult = nil
                     let ctx = modelContext
                     Task {
-                        let ok = await CloudBackup.backUp(context: ctx)
+                        // Phase 118:立即同步 = pull(合并去重)+ push
+                        let r = await CloudBackup.sync(context: ctx)
                         await MainActor.run {
                             backupBusy = false
-                            backupResult = ok
-                            if ok { Haptics.success() } else { Haptics.warning() }
+                            backupResult = r.ok
+                            syncMerged = r.merged
+                            if r.ok { Haptics.success() } else { Haptics.warning() }
                         }
                     }
                 } label: {
@@ -381,10 +399,19 @@ struct IOSSettingsView: View {
                 .disabled(backupBusy || items.isEmpty)
             }
             if let ok = backupResult {
-                Label(ok ? "settings.backup.done" : "settings.backup.failed",
-                      systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(ok ? .green : .orange)
+                Label {
+                    if ok && syncMerged > 0 {
+                        Text("settings.sync.merged \(syncMerged)")
+                    } else if ok {
+                        Text("settings.backup.done")
+                    } else {
+                        Text("settings.backup.failed")
+                    }
+                } icon: {
+                    Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                }
+                .font(.caption)
+                .foregroundStyle(ok ? .green : .orange)
             }
             Button(role: .destructive) {
                 showingClearConfirm = true

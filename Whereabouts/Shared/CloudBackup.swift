@@ -47,6 +47,31 @@ enum CloudBackup {
         return ok
     }
 
+    /// Phase 118:**手动同步** —— pull + merge + push 三步:
+    ///   ① 读 iCloud 云盘里其它设备写的 JSON → 按 name+位置 去重导入本机
+    ///   ② 把合并后的本机全量写回同一文件
+    /// 返回 (成功?, 合并进来的条数)。CloudKit 实时同步之外的兜底通道,
+    /// 也让"下拉刷新"有实打实的语义。
+    @MainActor
+    static func sync(context: ModelContext) async -> (ok: Bool, merged: Int) {
+        // ① pull(文件不存在不算失败 —— 可能是第一台设备)
+        var merged = 0
+        let fileData: Data? = await Task.detached(priority: .userInitiated) { () -> Data? in
+            guard let dir = folderURL() else { return nil }
+            let url = dir.appending(path: "whereabouts-backup.json")
+            // iCloud 占位文件(未下载)先触发下载
+            try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+            return try? Data(contentsOf: url)
+        }.value
+        if let fileData,
+           let result = WhereaboutsImporter.importJSON(fileData, into: context, dedup: true) {
+            merged = result.imported
+        }
+        // ② push(把合并后的全量写回)
+        let ok = await backUp(context: context)
+        return (ok, merged)
+    }
+
     /// 同步版 —— macOS 退出通知里用(quit 时没有跑 async 的机会,阻塞几百毫秒可接受)。
     @MainActor
     static func backUpBlocking(context: ModelContext) {

@@ -73,6 +73,9 @@ struct IOSOnboardingView: View {
 
     // MARK: - 五页
 
+    /// Phase 118:欢迎页直接给 iCloud 同步开关 —— 第一屏就把多设备心智建立起来。
+    @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
+
     private var welcomePage: some View {
         pageScaffold(
             icon: "shippingbox.fill", tint: IOSTheme.accent,
@@ -82,6 +85,29 @@ struct IOSOnboardingView: View {
             bullet("quote.bubble.fill", .blue, "onboarding.welcome.point1")
             bullet("square.stack.3d.up.fill", .indigo, "onboarding.welcome.point2")
             bullet("lock.shield.fill", .green, "onboarding.welcome.point3")
+            // iCloud 同步按钮:点击切换,默认开
+            Button {
+                Haptics.tap()
+                withAnimation(.snappy) { icloudSyncEnabled.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: icloudSyncEnabled ? "checkmark.icloud.fill" : "icloud")
+                        .font(.body.weight(.semibold))
+                    Text(icloudSyncEnabled ? "onboarding.welcome.icloud.on"
+                                           : "onboarding.welcome.icloud.off")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(icloudSyncEnabled ? AnyShapeStyle(Color.cyan.opacity(0.15))
+                                                : AnyShapeStyle(IOSTheme.gradient))
+                )
+                .foregroundStyle(icloudSyncEnabled ? Color.cyan : .white)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
         }
     }
 

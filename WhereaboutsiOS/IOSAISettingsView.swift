@@ -12,8 +12,9 @@ struct IOSAISettingsView: View {
             guideSection
             providerSection
             usageSection
-            claudeSection
+            // Phase 118:火山引擎在前(国内主力路线),Claude 在后。
             volcSection
+            claudeSection
             promptSection
         }
         .navigationTitle("settings.ai.header")
@@ -212,7 +213,11 @@ struct IOSAISettingsView: View {
         Task {
             do {
                 try await client.testConnection()
-                await MainActor.run { claudeTestResult = .success; claudeTesting = false; Haptics.success() }
+                await MainActor.run {
+                    claudeTestResult = .success; claudeTesting = false; Haptics.success()
+                    // Phase 118:配置验证通过 → 直接替用户把"录入时用 AI 理解"打开
+                    UserDefaults.standard.set(true, forKey: "useAIOnInput")
+                }
             } catch {
                 await MainActor.run {
                     claudeTestResult = .failure(error.localizedDescription)
@@ -238,14 +243,34 @@ struct IOSAISettingsView: View {
 
     private var volcSection: some View {
         Section {
-            TextField("settings.ai.volc.model.label", text: $volcModel,
-                      prompt: Text(verbatim: "doubao-seed-1-6-250615 或 ep-xxxxx"))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .onChange(of: volcModel) { _, new in
-                    AISettings.volcModel = new
-                    volcTestResult = nil
+            // Phase 118:模型下拉(推荐置顶)+ 自由输入并存 —— 下拉选中直接覆盖输入框。
+            HStack {
+                TextField("settings.ai.volc.model.label", text: $volcModel,
+                          prompt: Text(verbatim: VolcModelPreset.recommended + " 或 ep-xxxxx"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onChange(of: volcModel) { _, new in
+                        AISettings.volcModel = new
+                        volcTestResult = nil
+                    }
+                Menu {
+                    ForEach(VolcModelPreset.all, id: \.id) { preset in
+                        Button {
+                            volcModel = preset.id
+                        } label: {
+                            if preset.id == volcModel {
+                                Label(preset.label, systemImage: "checkmark")
+                            } else {
+                                Text(verbatim: preset.label)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(IOSTheme.accent)
                 }
+            }
 
             keyField(labelKey: "settings.ai.apiKey.label", prompt: "Volcengine API Key",
                      text: $volcKey, show: $showVolcKey) { new in
@@ -313,7 +338,11 @@ struct IOSAISettingsView: View {
         Task {
             do {
                 try await client.testConnection()
-                await MainActor.run { volcTestResult = .success; volcTesting = false; Haptics.success() }
+                await MainActor.run {
+                    volcTestResult = .success; volcTesting = false; Haptics.success()
+                    // Phase 118:配置验证通过 → 直接替用户把"录入时用 AI 理解"打开
+                    UserDefaults.standard.set(true, forKey: "useAIOnInput")
+                }
             } catch {
                 await MainActor.run {
                     volcTestResult = .failure(error.localizedDescription)

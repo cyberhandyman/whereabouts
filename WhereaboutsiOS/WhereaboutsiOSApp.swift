@@ -49,7 +49,7 @@ struct IOSRootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            IOSHomeView()
+            IOSHomeView(onCompose: { tab = .record })
                 .tabItem { Label("ios.tab.items", systemImage: "shippingbox.fill") }
                 .tag(Tab.items)
             IOSRecordView(onSaved: { tab = .items })

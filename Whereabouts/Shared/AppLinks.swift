@@ -16,4 +16,8 @@ enum AppLinks {
 
     /// 支持页 / 用户帮助入口(App Store 的 support URL 也填它)。
     static let supportPage = URL(string: "https://whereabouts.top/guide.html")!
+
+    /// 何处使用完全教程(Phase 118):录入 / 手势 / 位置 / 借出 / 同步 / AI 全功能速查。
+    /// ⚠️ 每次 iOS 版本更新都要同步更新这页(约定记在项目 memory)。
+    static let tutorial = URL(string: "https://whereabouts.top/tutorial.html")!
 }
