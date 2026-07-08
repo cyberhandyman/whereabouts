@@ -27,7 +27,8 @@ settings:
       SWIFT_COMPILATION_MODE: wholemodule
   base:
     SWIFT_VERSION: "5.10"
-    DEVELOPMENT_TEAM: ""
+    # Phase 116:Bam 的 Apple Developer 个人团队(2026-07-08 审核通过)。
+    DEVELOPMENT_TEAM: "6893263DW5"
     CODE_SIGN_STYLE: Automatic
     ENABLE_PREVIEWS: YES
     MARKETING_VERSION: "0.2.0"
@@ -57,6 +58,9 @@ targets:
         PRODUCT_NAME: Whereabouts
         PRODUCT_BUNDLE_IDENTIFIER: com.bamcope.whereabouts
         INFOPLIST_FILE: Whereabouts/Info.plist
+        # Phase 116:日常开发版 entitlements(iCloud,无沙箱)。
+        # App Store 提交时换成 Whereabouts-AppStore.entitlements(含沙箱)。
+        CODE_SIGN_ENTITLEMENTS: Whereabouts/Whereabouts-Dev.entitlements
 
   WhereaboutsiOS:
     type: application
@@ -92,6 +96,8 @@ targets:
         INFOPLIST_FILE: WhereaboutsiOS/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
+        # Phase 116:iCloud 同步 entitlements。
+        CODE_SIGN_ENTITLEMENTS: WhereaboutsiOS/WhereaboutsiOS.entitlements
         # 本机的 xcodegen 是独立二进制,缺 SettingPresets(生成时报 "No iOS settings found"),
         # 平台默认值不会自动写入 —— 这里显式给足,否则 SDKROOT 落回 macosx。
         SDKROOT: iphoneos

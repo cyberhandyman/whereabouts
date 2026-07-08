@@ -12,10 +12,8 @@ struct WhereaboutsiOSApp: App {
     @AppStorage("appearance") private var appearance: AppearanceMode = .system
 
     /// 共享 container —— 通知调度器要用它查置顶物品(跟 macOS 版同一做法)。
-    private let sharedContainer: ModelContainer = {
-        let schema = Schema([Item.self, Location.self, LocationLog.self, Tag.self, EditLog.self])
-        return try! ModelContainer(for: schema)
-    }()
+    /// Phase 116:经 AppContainer 走 CloudKit(可用时)+ 本地回退;iOS 用沙箱默认存储位置。
+    private let sharedContainer: ModelContainer = AppContainer.make(storeURL: nil)
 
     init() {
         NotificationScheduler.shared.container = sharedContainer

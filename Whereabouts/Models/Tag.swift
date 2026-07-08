@@ -7,14 +7,15 @@ import SwiftUI
 /// colorHex 存十六进制色串("#FFB000"),展示时还原成 Color/NSColor;预设色见 `TagPalette`。
 @Model
 final class Tag {
+    // Phase 116(iCloud):CloudKit 要求非可选属性带默认值。
     /// 用户可见名:"生活用品" / "3C 电子" / 用户自填。
-    var name: String
+    var name: String = ""
 
     /// 颜色码 "#RRGGBB"。展示时通过 Color(hex:) 还原。
-    var colorHex: String
+    var colorHex: String = "#8E8E93"
 
     /// 创建时间,用于排序(预设是 app launch 时 seed,后加的排末尾)。
-    var createdAt: Date
+    var createdAt: Date = Date.distantPast
 
     /// 反向关系:用了这个 tag 的所有 item。
     /// nullify:删 tag 不会删 item(只是清掉这条挂载)。

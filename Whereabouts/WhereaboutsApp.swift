@@ -23,11 +23,10 @@ struct WhereaboutsApp: App {
     ///   ~/Library/Application Support/Whereabouts/whereabouts.store
     /// 恢复脚本 Tools/recover_store.sh 也把捞回的数据装到这里。
     private let sharedContainer: ModelContainer = {
-        let schema = Schema([Item.self, Location.self, LocationLog.self, Tag.self, EditLog.self])
         let dir = URL.applicationSupportDirectory.appending(path: "Whereabouts", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let config = ModelConfiguration(url: dir.appending(path: "whereabouts.store"))
-        return try! ModelContainer(for: schema, configurations: config)
+        // Phase 116:经 AppContainer 走 CloudKit(可用时)+ 本地回退。
+        return AppContainer.make(storeURL: dir.appending(path: "whereabouts.store"))
     }()
 
     init() {
@@ -695,6 +694,10 @@ private struct GeneralSettingsTab: View {
     @State private var languageChanged = false
     /// 用户开了通知开关但系统拒绝权限时的提示。
     @State private var notificationsPermissionDenied = false
+    /// Phase 116:iCloud 同步偏好(默认开;key 与 AppContainer.syncPrefKey 一致)。
+    @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
+    /// 本次会话改过开关 → 显示"重启生效"提示。
+    @State private var icloudPrefChanged = false
 
     var body: some View {
         Form {
@@ -732,6 +735,42 @@ private struct GeneralSettingsTab: View {
                 .pickerStyle(.menu)
             } header: {
                 Text("settings.appearance.header")
+            }
+
+            // Phase 116:iCloud 同步(CloudKit 私有库,双端同一开关语义)。
+            Section {
+                Toggle(isOn: $icloudSyncEnabled) {
+                    HStack(spacing: 6) {
+                        Text("settings.icloud.toggle")
+                        Text(AppContainer.cloudKitActive
+                             ? "settings.icloud.status.on"
+                             : "settings.icloud.status.local")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background((AppContainer.cloudKitActive ? Color.green : Color.secondary).opacity(0.14),
+                                        in: .capsule)
+                            .foregroundStyle(AppContainer.cloudKitActive ? .green : .secondary)
+                    }
+                }
+                .onChange(of: icloudSyncEnabled) { _, _ in icloudPrefChanged = true }
+                if icloudPrefChanged {
+                    Label("settings.icloud.restartHint", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } footer: {
+                Group {
+                    if !icloudSyncEnabled {
+                        Text("settings.icloud.footer.off")
+                    } else if AppContainer.cloudKitActive {
+                        Text("settings.icloud.footer.active")
+                    } else {
+                        Text("settings.icloud.footer.inactive")
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
             }
 
             Section {

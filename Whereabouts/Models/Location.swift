@@ -16,7 +16,8 @@ enum LocationResolution {
 /// 用 parent 引用,避免冗余字符串路径,改名时整棵子树跟着改。
 @Model
 final class Location {
-    var name: String
+    // Phase 116(iCloud):CloudKit 要求非可选属性带默认值。
+    var name: String = ""
     var parent: Location?
 
     /// 反向关系:这个位置下属的子位置。

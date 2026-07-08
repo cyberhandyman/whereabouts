@@ -21,12 +21,14 @@ func formatPurchaseDate(_ date: Date?, precision: String?) -> String? {
 
 @Model
 final class Item {
-    var name: String
-    var notes: String
-    var createdAt: Date
-    var updatedAt: Date
+    // Phase 116(iCloud):CloudKit 要求所有非可选属性带默认值 —— 这里的默认值只为
+    // 满足 schema 校验,实际值始终由 init 赋。
+    var name: String = ""
+    var notes: String = ""
+    var createdAt: Date = Date.distantPast
+    var updatedAt: Date = Date.distantPast
     /// 最后一次声明该物品在某位置的时间(便于"上次见到"提示);初次为 createdAt。
-    var lastSeenAt: Date
+    var lastSeenAt: Date = Date.distantPast
 
     /// 物品所在位置。可空 —— 允许"先记下,位置待定"。
     var location: Location?

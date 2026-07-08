@@ -3545,6 +3545,23 @@
         }
       }
     },
+    "ios.settings.title": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whereabouts — Train Your Inner J"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "J人养成器 - 何处"
+          }
+        }
+      }
+    },
     "ios.stat.items": {
       "comment": "iOS home stat tile caption — total items.",
       "localizations": {
@@ -6435,42 +6452,110 @@
         }
       }
     },
-    "settings.icloud.footer": {
-      "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+    "settings.icloud.footer.active": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic sync between Mac and iPhone is in the works (requires the App Store build). For now, use JSON export/import to move data between devices."
+            "value": "Your data syncs to the private iCloud space of your Apple Account. Sign in with the same account on Mac and iPhone and everything stays in sync; the developer can never see it."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mac 和 iPhone 数据自动同步正在准备中(需要 App Store 版本)。目前可用「导出 / 导入 JSON」在设备间搬运数据。"
+            "value": "数据会自动同步到你 Apple 账户的 iCloud 私有空间。Mac 和 iPhone 登录同一账户即可互通;开发者无法看到任何内容。"
           }
         }
       }
     },
-    "settings.icloud.soon": {
-      "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+    "settings.icloud.footer.inactive": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Coming soon"
+            "value": "iCloud could not be reached this launch (not signed in, or restricted network). Data is kept locally for now — sign in to iCloud and reopen the app to start syncing."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "即将推出"
+            "value": "本次启动未能连接 iCloud(未登录 iCloud 账户或网络受限),数据暂以本机模式保存,不影响使用。登录 iCloud 后重开 app 即自动同步。"
           }
         }
       }
     },
-    "settings.icloud.title": {
-      "comment": "iOS onboarding / demo-data / iCloud teaser (Phase 115).",
+    "settings.icloud.footer.off": {
+      "comment": "Phase 116 iCloud sync footer when user turned sync off.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync is off — data stays on this device only. You can still move data between devices with JSON export/import."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步已关闭 —— 数据只保存在本机。仍可用 JSON 导出/导入在设备间搬运。"
+          }
+        }
+      }
+    },
+    "settings.icloud.restartHint": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takes effect the next time you open the app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改动将在下次打开 app 时生效。"
+          }
+        }
+      }
+    },
+    "settings.icloud.status.local": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local only"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本机模式"
+          }
+        }
+      }
+    },
+    "settings.icloud.status.on": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已开启"
+          }
+        }
+      }
+    },
+    "settings.icloud.toggle": {
+      "comment": "Phase 116 iCloud sync / iOS settings title / quotes.",
       "localizations": {
         "en": {
           "stringUnit": {

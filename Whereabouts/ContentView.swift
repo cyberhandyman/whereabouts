@@ -14,23 +14,7 @@ struct ContentView: View {
     private var rawItems: [Item]
     @Query private var allTags: [Tag]
 
-    /// 鸡汤金句静态字面量数组 —— Xcode 编译时能扫到这 35 个 LocalizedStringKey 字面量,
-    /// 保证 catalog entry 被打包到 binary。动态 `LocalizedStringKey("...\(i)")` 扫不到,会显示 raw key。
-    /// 1–15:早期 J 人语录;16–35:Phase 11 新增的"名人名言"风格语录。
-    private static let jquotes: [LocalizedStringKey] = [
-        "status.jquote.1",  "status.jquote.2",  "status.jquote.3",
-        "status.jquote.4",  "status.jquote.5",  "status.jquote.6",
-        "status.jquote.7",  "status.jquote.8",  "status.jquote.9",
-        "status.jquote.10", "status.jquote.11", "status.jquote.12",
-        "status.jquote.13", "status.jquote.14", "status.jquote.15",
-        "status.jquote.16", "status.jquote.17", "status.jquote.18",
-        "status.jquote.19", "status.jquote.20", "status.jquote.21",
-        "status.jquote.22", "status.jquote.23", "status.jquote.24",
-        "status.jquote.25", "status.jquote.26", "status.jquote.27",
-        "status.jquote.28", "status.jquote.29", "status.jquote.30",
-        "status.jquote.31", "status.jquote.32", "status.jquote.33",
-        "status.jquote.34", "status.jquote.35",
-    ]
+    // Phase 116:名言库挪到 Shared/QuoteBank.swift(iOS 也用)。
 
     @AppStorage("sortMode") private var sortMode: SortMode = .updated
 
@@ -142,8 +126,8 @@ struct ContentView: View {
     @AppStorage("firstLaunchTimestamp") private var firstLaunchTimestamp: Double = 0
 
     /// 本次 session 随机选的金句索引。session 内不变,每次启动重选 —— 用户"打开 app 就能看见一句新的"。
-    /// 范围跟 Self.jquotes.count 对齐(Phase 11 起 35 条)。
-    @State private var quoteIndex: Int = Int.random(in: 0..<35)
+    /// 范围跟 QuoteBank.all.count 对齐(Phase 11 起 35 条)。
+    @State private var quoteIndex: Int = Int.random(in: 0..<QuoteBank.all.count)
 
     /// 回收站 sheet 开关。
     @State private var showingTrash = false
@@ -552,7 +536,7 @@ struct ContentView: View {
     /// 视觉:斜体灰字 + 右下角小字署名;底色比 inputBar 更淡,显得安静而不抢戏。
     private var quoteBanner: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text(Self.jquotes[quoteIndex])
+            Text(QuoteBank.all[quoteIndex])
                 .font(.callout)
                 .italic()
                 .foregroundStyle(.secondary)

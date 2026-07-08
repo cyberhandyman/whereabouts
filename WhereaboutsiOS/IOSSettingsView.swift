@@ -30,6 +30,10 @@ struct IOSSettingsView: View {
     @State private var notificationsPermissionDenied = false
     /// Phase 115:置 false 即重放首启引导(IOSRootView 的 fullScreenCover 监听它)。
     @AppStorage("onboardingShown") private var onboardingShown: Bool = false
+    /// Phase 116:iCloud 同步偏好(默认开;key 与 AppContainer.syncPrefKey 一致)。
+    @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
+    /// 本次会话改过开关 → 显示"重启生效"提示。
+    @State private var icloudPrefChanged = false
 
     // 数据导入 / 导出
     @State private var showingExporter = false
@@ -51,7 +55,8 @@ struct IOSSettingsView: View {
                 dataSection
                 aboutSection
             }
-            .navigationTitle("ios.tab.settings")
+            // 用户指定:设置页大标题用品牌梗「J人养成器 - 何处」(英文版意译)。
+            .navigationTitle("ios.settings.title")
         }
         .fileExporter(
             isPresented: $showingExporter,
@@ -273,23 +278,40 @@ struct IOSSettingsView: View {
         }
     }
 
-    // MARK: - iCloud 预告(Phase 115)
+    // MARK: - iCloud 同步(Phase 116,正式上线)
 
-    /// iCloud 同步还没上(需要 App Store 版 + CloudKit entitlement),
-    /// 先放一行"即将推出"占位,告诉用户方向 + 当下的替代方案(JSON 导出/导入)。
+    /// 真开关:偏好默认开;CloudKit 绑定在容器创建时决定 → 改动下次启动生效。
+    /// 状态徽章显示本次启动实际是否挂上了 CloudKit(AppContainer.cloudKitActive)。
     private var icloudSection: some View {
         Section {
-            settingsRow(icon: "icloud.fill", tint: .cyan, titleKey: "settings.icloud.title") {
-                Text("settings.icloud.soon")
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .background(Color.cyan.opacity(0.14), in: .capsule)
-                    .foregroundStyle(.cyan)
+            Toggle(isOn: $icloudSyncEnabled) {
+                settingsRow(icon: "icloud.fill", tint: .cyan,
+                            titleKey: "settings.icloud.toggle") {
+                    Text(AppContainer.cloudKitActive
+                         ? "settings.icloud.status.on"
+                         : "settings.icloud.status.local")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background((AppContainer.cloudKitActive ? Color.green : Color.secondary).opacity(0.14),
+                                    in: .capsule)
+                        .foregroundStyle(AppContainer.cloudKitActive ? .green : .secondary)
+                }
             }
-            .foregroundStyle(.secondary)
+            .onChange(of: icloudSyncEnabled) { _, _ in icloudPrefChanged = true }
+            if icloudPrefChanged {
+                Label("settings.icloud.restartHint", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         } footer: {
-            Text("settings.icloud.footer")
+            if !icloudSyncEnabled {
+                Text("settings.icloud.footer.off")
+            } else if AppContainer.cloudKitActive {
+                Text("settings.icloud.footer.active")
+            } else {
+                Text("settings.icloud.footer.inactive")
+            }
         }
     }
 

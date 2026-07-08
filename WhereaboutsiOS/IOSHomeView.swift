@@ -234,6 +234,12 @@ struct IOSHomeView: View {
                     }
                 }
             }
+
+            // Phase 116:claude code 名言 —— 列表末尾一行小字,12 秒换一条(淡入淡出)。
+            Section {
+                quoteFooter
+                    .listRowStyleClear(vertical: 10)
+            }
         }
         .listStyle(.plain)
         .listSectionSpacing(.compact)
@@ -477,6 +483,39 @@ struct IOSHomeView: View {
             }
             .scrollClipDisabled()
         }
+    }
+
+    // MARK: - 名言滚动(Phase 116)
+
+    /// 当前显示第几条(启动随机,之后定时轮换)。
+    @State private var quoteIndex: Int = Int.random(in: 0..<QuoteBank.all.count)
+    /// 12 秒换一条 —— 足够读完,又有"在滚动"的活气。
+    private let quoteTimer = Timer.publish(every: 12, on: .main, in: .common).autoconnect()
+
+    /// 列表底部的名言行:斜体小灰字 + 署名,换条时淡入淡出。
+    private var quoteFooter: some View {
+        VStack(alignment: .trailing, spacing: 3) {
+            Text(QuoteBank.all[quoteIndex])
+                .font(.caption)
+                .italic()
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: "—— claude code")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .id(quoteIndex)  // 换条时整块重建 → transition 生效
+        .transition(.opacity)
+        .onReceive(quoteTimer) { _ in
+            withAnimation(.easeInOut(duration: 0.8)) {
+                // 随机但不重复当前这条
+                var next = Int.random(in: 0..<QuoteBank.all.count)
+                if next == quoteIndex { next = (next + 1) % QuoteBank.all.count }
+                quoteIndex = next
+            }
+        }
+        .padding(.horizontal, 4)
     }
 
     /// 全空状态(还没有任何物品):品牌渐变图标 + 三个示例句。
