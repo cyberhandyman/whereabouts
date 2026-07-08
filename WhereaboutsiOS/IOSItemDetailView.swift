@@ -507,6 +507,24 @@ struct IOSItemDetailView: View {
                                         Text(editSourceLabel(log.source))
                                             .font(.caption2)
                                             .foregroundStyle(editSourceColor(log.source))
+                                        // Phase 120:AI 改名且仍生效 → ↩ 还原(同 macOS)
+                                        if shouldShowRestoreButton(for: log) {
+                                            Spacer(minLength: 0)
+                                            Button {
+                                                restoreNameFromLog(log)
+                                            } label: {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "arrow.uturn.backward")
+                                                    Text("row.ai.revert")
+                                                }
+                                                .font(.caption2)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(Color.orange.opacity(0.16), in: .capsule)
+                                                .foregroundStyle(.orange)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
                                     }
                                     HStack(spacing: 4) {
                                         Text(log.oldValue ?? "·")
@@ -571,6 +589,26 @@ struct IOSItemDetailView: View {
             content()
             Spacer(minLength: 0)
         }
+    }
+
+    /// Phase 120:这条 EditLog 该显示「还原」吗?(判定与 macOS 一致)
+    private func shouldShowRestoreButton(for log: EditLog) -> Bool {
+        guard log.field == "name",
+              log.source.hasPrefix("ai_"),
+              let old = log.oldValue, !old.isEmpty,
+              let new = log.newValue else { return false }
+        return item.name == new
+    }
+
+    /// 还原名字 + 写 source="restore" 的 EditLog。
+    private func restoreNameFromLog(_ log: EditLog) {
+        guard let old = log.oldValue, !old.isEmpty else { return }
+        let snap = ItemFieldSnapshot(item)
+        item.name = old
+        item.updatedAt = .now
+        snap.recordEdits(against: item, source: "restore", in: modelContext)
+        Haptics.success()
+        flashAck(String(localized: "row.ai.reverted"))
     }
 
     private func editFieldLabel(_ field: String) -> LocalizedStringKey {

@@ -355,8 +355,7 @@ struct IOSHomeView: View {
                     aiStatusPill
                         .listRowStyleClear()
                 }
-                facetChipsRow
-                    .listRowStyleClear()
+                // Phase 120:原房间 chips 行已并进可点击的统计瓷砖,不再单独渲染。
             }
 
             Section {
@@ -486,6 +485,31 @@ struct IOSHomeView: View {
         exitEditMode()
     }
 
+    // MARK: - Phase 120:AI 改名一键还原(列表行内)
+
+    /// 若 item 的名字当前仍是 AI 最近一次改出来的值,返回改之前的旧名;否则 nil。
+    /// 判定逻辑与 macOS 详情页 shouldShowRestoreButton 一致。
+    private func aiRevertableOldName(for item: Item) -> String? {
+        let log = item.editHistory
+            .filter { $0.field == "name" && $0.source.hasPrefix("ai_") }
+            .sorted { $0.recordedAt > $1.recordedAt }
+            .first
+        guard let log, let old = log.oldValue, !old.isEmpty,
+              let new = log.newValue, item.name == new else { return nil }
+        return old
+    }
+
+    /// 还原为 AI 改名前的名字,并写一条 source="restore" 的 EditLog(时间线可见)。
+    private func revertAIName(for item: Item) {
+        guard let old = aiRevertableOldName(for: item) else { return }
+        let snap = ItemFieldSnapshot(item)
+        item.name = old
+        item.updatedAt = .now
+        snap.recordEdits(against: item, source: "restore", in: modelContext)
+        Haptics.success()
+        flashBatchAck(String(localized: "row.ai.reverted"))
+    }
+
     private func flashBatchAck(_ msg: String) {
         withAnimation(.snappy) { batchAck = msg }
         Task {
@@ -540,12 +564,35 @@ struct IOSHomeView: View {
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
                         Spacer(minLength: 0)
+                        // Phase 120:AI 状态 —— 处理中 spinner+「正在AI理解」;
+                        // 完成后 ✓ + 「一键还原」小字(名字被 AI 改过才显示)。
                         if aiRunner.processing.contains(item.persistentModelID) {
-                            ProgressView().controlSize(.mini)
+                            HStack(spacing: 3) {
+                                ProgressView().controlSize(.mini)
+                                Text("row.ai.processing")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         } else if aiRunner.completed.contains(item.persistentModelID) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.green)
+                            HStack(spacing: 5) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                if aiRevertableOldName(for: item) != nil {
+                                    Button {
+                                        revertAIName(for: item)
+                                    } label: {
+                                        Text("row.ai.revert")
+                                            .font(.caption2.weight(.medium))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.orange.opacity(0.15), in: .capsule)
+                                            .foregroundStyle(.orange)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .transition(.opacity)
                         }
                     }
                     if let path = item.location?.path {
@@ -652,22 +699,155 @@ struct IOSHomeView: View {
 
     // MARK: - 顶部区块
 
-    /// 统计瓷砖横滚条:物品 / 房间 / 置顶 / 借出。
+    /// Phase 120:统计瓷砖 = 筛选器。
+    ///   - 物品:点击清除全部筛选(有筛选时高亮成"清除"入口)
+    ///   - 房间 / 渠道 / 品牌 / 年份:下拉菜单选一个,选中项再点一次取消
+    ///   - 置顶 / 借出:点击开关式筛选,再点取消
+    /// 选中的瓷砖描边高亮;瓷砖上的数字 = 当前筛选维度的计数。
     private var statsStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
+                // 物品(= 清除全部)
                 StatTile(value: items.count, captionKey: "ios.stat.items",
-                         systemName: "shippingbox.fill", tint: IOSTheme.accent)
-                StatTile(value: roomCount, captionKey: "ios.stat.rooms",
-                         systemName: "house.fill", tint: IOSTheme.accentAlt)
+                         systemName: filter.isEmpty ? "shippingbox.fill" : "xmark.circle.fill",
+                         tint: IOSTheme.accent,
+                         selected: !filter.isEmpty)
+                    .onTapGesture {
+                        Haptics.tap()
+                        withAnimation(.snappy) { filter.clearAll() }
+                    }
+                // 房间(下拉)
+                Menu {
+                    ForEach(roomFacets, id: \.0) { (name, count) in
+                        Button {
+                            withAnimation(.snappy) {
+                                filter.room = (filter.room == name) ? nil : name
+                            }
+                        } label: {
+                            if filter.room == name {
+                                Label("\(name)(\(count))", systemImage: "checkmark")
+                            } else {
+                                Text(verbatim: "\(name)(\(count))")
+                            }
+                        }
+                    }
+                    if filter.room != nil {
+                        Divider()
+                        Button("ios.tile.clearHint") {
+                            withAnimation(.snappy) { filter.room = nil }
+                        }
+                    }
+                } label: {
+                    StatTile(value: roomCount, captionKey: "ios.stat.rooms",
+                             systemName: "house.fill", tint: IOSTheme.accentAlt,
+                             selected: filter.room != nil,
+                             detailText: filter.room)
+                }
+                .buttonStyle(.plain)
+                // 置顶(开关)
                 StatTile(value: pinnedCount, captionKey: "ios.stat.pinned",
-                         systemName: "pin.fill", tint: .orange)
+                         systemName: "pin.fill", tint: .orange,
+                         selected: filter.pinned == true)
+                    .onTapGesture {
+                        Haptics.tap()
+                        withAnimation(.snappy) {
+                            filter.pinned = (filter.pinned == true) ? nil : true
+                        }
+                    }
+                // 借出(开关)
                 StatTile(value: lentOutCount, captionKey: "ios.stat.lent",
-                         systemName: "person.fill.checkmark", tint: .purple)
+                         systemName: "person.fill.checkmark", tint: .purple,
+                         selected: filter.lent == true)
+                    .onTapGesture {
+                        Haptics.tap()
+                        withAnimation(.snappy) {
+                            filter.lent = (filter.lent == true) ? nil : true
+                        }
+                    }
+                // 渠道 / 品牌 / 年份(下拉,有数据才显示)
+                facetTileMenu(values: sourceFacets, captionKey: "meta.label.source",
+                              icon: "bag.fill", tint: .teal,
+                              selected: filter.source) { v in
+                    filter.source = (filter.source == v) ? nil : v
+                }
+                facetTileMenu(values: brandFacets, captionKey: "meta.label.brand",
+                              icon: "seal.fill", tint: .indigo,
+                              selected: filter.brand) { v in
+                    filter.brand = (filter.brand == v) ? nil : v
+                }
+                facetTileMenu(values: yearFacets, captionKey: "meta.label.year",
+                              icon: "calendar", tint: .pink,
+                              selected: filter.year.map(String.init)) { v in
+                    let y = Int(v)
+                    filter.year = (filter.year == y) ? nil : y
+                }
             }
             .padding(.vertical, 2)
         }
         .scrollClipDisabled()
+    }
+
+    /// 下拉式筛选瓷砖(渠道/品牌/年份共用)。values 空则不渲染。
+    @ViewBuilder
+    private func facetTileMenu(values: [(String, Int)], captionKey: LocalizedStringKey,
+                               icon: String, tint: Color,
+                               selected: String?, tap: @escaping (String) -> Void) -> some View {
+        if !values.isEmpty {
+            Menu {
+                ForEach(values, id: \.0) { (value, count) in
+                    Button {
+                        withAnimation(.snappy) { tap(value) }
+                    } label: {
+                        if selected == value {
+                            Label("\(value)(\(count))", systemImage: "checkmark")
+                        } else {
+                            Text(verbatim: "\(value)(\(count))")
+                        }
+                    }
+                }
+                if let selected {
+                    Divider()
+                    Button("ios.tile.clearHint") {
+                        withAnimation(.snappy) { tap(selected) }
+                    }
+                }
+            } label: {
+                StatTile(value: values.count, captionKey: captionKey,
+                         systemName: icon, tint: tint,
+                         selected: selected != nil,
+                         detailText: selected)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// 渠道 facet(同 macOS 口径:distinct purchaseSource,按数量降序)。
+    private var sourceFacets: [(String, Int)] {
+        var counts: [String: Int] = [:]
+        for item in items {
+            if let s = item.purchaseSource, !s.isEmpty { counts[s, default: 0] += 1 }
+        }
+        return counts.sorted { ($0.value, $0.key) > ($1.value, $1.key) }.map { ($0.key, $0.value) }
+    }
+
+    /// 品牌 facet(name 词典实时推断,不入库,同 macOS)。
+    private var brandFacets: [(String, Int)] {
+        var counts: [String: Int] = [:]
+        for item in items {
+            if let b = InputParser.brand(for: item.name) { counts[b, default: 0] += 1 }
+        }
+        return counts.sorted { ($0.value, $0.key) > ($1.value, $1.key) }.map { ($0.key, $0.value) }
+    }
+
+    /// 年份 facet(购买年份,同 macOS)。
+    private var yearFacets: [(String, Int)] {
+        var counts: [Int: Int] = [:]
+        for item in items {
+            guard let d = item.purchaseDate else { continue }
+            counts[Calendar.current.component(.year, from: d), default: 0] += 1
+        }
+        return counts.sorted { ($0.value, $0.key) > ($1.value, $1.key) }
+            .map { (String($0.key), $0.value) }
     }
 
     /// AI 连接状态一行(仅配置了 key 时显示;点击去设置改)。
@@ -714,43 +894,6 @@ struct IOSHomeView: View {
         .iosCard(padding: 10, cornerRadius: 14)
     }
 
-    /// facet chips:房间(top 8)+ 借出(有借出时)+ 清除。
-    @ViewBuilder
-    private var facetChipsRow: some View {
-        let rooms = roomFacets
-        if !rooms.isEmpty || lentOutCount > 0 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(rooms, id: \.0) { (name, count) in
-                        FacetChip(label: name, count: count, selected: filter.room == name) {
-                            filter.room = (filter.room == name) ? nil : name
-                        }
-                    }
-                    if lentOutCount > 0 {
-                        FacetChip(label: String(localized: "filter.lent.out"),
-                                  count: lentOutCount,
-                                  selected: filter.lent == true) {
-                            filter.lent = (filter.lent == true) ? nil : true
-                        }
-                    }
-                    if !filter.isEmpty {
-                        Button {
-                            Haptics.tap()
-                            filter.clearAll()
-                        } label: {
-                            Label("filter.button.clearAll", systemImage: "xmark.circle.fill")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-            .scrollClipDisabled()
-        }
-    }
-
     // MARK: - 名言滚动(Phase 116)
 
     /// 当前显示第几条(启动随机,之后定时轮换)。
@@ -775,7 +918,6 @@ struct IOSHomeView: View {
         .transition(.opacity)
         .onReceive(quoteTimer) { _ in
             withAnimation(.easeInOut(duration: 0.8)) {
-                // 随机但不重复当前这条
                 var next = Int.random(in: 0..<QuoteBank.all.count)
                 if next == quoteIndex { next = (next + 1) % QuoteBank.all.count }
                 quoteIndex = next
@@ -1020,7 +1162,8 @@ final class IOSAIRunner {
                         self.completed.insert(id)
                     }
                     Task {
-                        try? await Task.sleep(for: .seconds(4))
+                        // Phase 120:10 秒窗口 —— 给用户看清 ✓ 并有时间点「一键还原」
+                        try? await Task.sleep(for: .seconds(10))
                         await MainActor.run { _ = self.completed.remove(id) }
                     }
                 } catch {

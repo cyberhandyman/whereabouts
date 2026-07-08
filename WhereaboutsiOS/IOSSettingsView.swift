@@ -169,6 +169,14 @@ struct IOSSettingsView: View {
             } label: {
                 settingsRow(icon: "tag.fill", tint: .green, titleKey: "ios.tags.title")
             }
+            // Phase 120:位置管理子页(复用 macOS 同一实现:树形/重命名/合并/批量删)
+            NavigationLink {
+                LocationsSettingsTab()
+                    .navigationTitle("ios.locations.title")
+                    .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                settingsRow(icon: "mappin.and.ellipse", tint: .red, titleKey: "ios.locations.title")
+            }
             // Phase 118:完全教程(网页,whereabouts.top)
             Link(destination: AppLinks.tutorial) {
                 settingsRow(icon: "graduationcap.fill", tint: .orange,

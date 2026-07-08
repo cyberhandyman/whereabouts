@@ -162,11 +162,15 @@ struct ItemThumb: View {
 }
 
 /// 首页顶部的统计瓷砖:渐变图标 + 大数字(SF Rounded)+ 小标题。
+/// Phase 120 起兼作筛选器:`selected` 时描边高亮 + 底色染色;
+/// `detailText` 显示当前选中的筛选值(如房间名),替换掉数字行。
 struct StatTile: View {
     let value: Int
     let captionKey: LocalizedStringKey
     let systemName: String
     var tint: Color = IOSTheme.accent
+    var selected: Bool = false
+    var detailText: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -177,16 +181,35 @@ struct StatTile: View {
                 gradient: LinearGradient(colors: [tint, tint.opacity(0.65)],
                                          startPoint: .topLeading, endPoint: .bottomTrailing)
             )
-            Text(verbatim: "\(value)")
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .monospacedDigit()
-                .contentTransition(.numericText())
+            if let detailText {
+                Text(verbatim: detailText)
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(tint)
+            } else {
+                Text(verbatim: "\(value)")
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
             Text(captionKey)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(width: 92, alignment: .leading)
-        .iosCard(padding: 12, cornerRadius: 16)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(selected ? tint.opacity(0.12) : Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(selected ? tint : Color(.quaternaryLabel).opacity(0.5),
+                              lineWidth: selected ? 1.5 : 0.5)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .contentShape(Rectangle())
     }
 }
 

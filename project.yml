@@ -83,6 +83,8 @@ targets:
       - path: Whereabouts/Views/AmbiguousLocationPicker.swift
       # Phase 119:多选批量编辑三件套(标签/位置/渠道)iOS 复用
       - path: Whereabouts/Views/BatchEditSheets.swift
+      # Phase 120:位置管理(树形整理/合并/批量删)iOS 复用 macOS 同一实现
+      - path: Whereabouts/LocationsSettingsTab.swift
       # 单一 String Catalog 双端共用;图标资产共用(appiconset 里已有 iOS 1024 图)
       - path: Whereabouts/Localizable.xcstrings
       - path: Whereabouts/Assets.xcassets

@@ -54,6 +54,8 @@ final class FilterModel {
     var location: String? = nil
     /// Phase 104:**借出状态** —— true = 只看借出去的,false = 只看在家的,nil = 不限制。
     var lent: Bool? = nil
+    /// Phase 120:**置顶** —— true = 只看置顶的,nil = 不限制(iOS 统计瓷砖筛选用)。
+    var pinned: Bool? = nil
 
     // 详情页 chip 点击带来的精确筛选
     var model: String? = nil
@@ -65,13 +67,13 @@ final class FilterModel {
 
     var isEmpty: Bool {
         search.isEmpty && source == nil && year == nil && brand == nil
-            && room == nil && location == nil && lent == nil
+            && room == nil && location == nil && lent == nil && pinned == nil
             && model == nil && color == nil && version == nil && exactDate == nil
     }
 
     func clearAll() {
         search = ""; source = nil; year = nil; brand = nil
-        room = nil; location = nil; lent = nil
+        room = nil; location = nil; lent = nil; pinned = nil
         model = nil; color = nil; version = nil
         exactDate = nil; exactDatePrecision = nil
     }
@@ -105,6 +107,8 @@ final class FilterModel {
         if let loc = location, item.location?.path != loc { return false }
         // Phase 104:**借出状态** —— true 只看借出去的,false 只看在家的。
         if let l = lent, item.isLentOut != l { return false }
+        // Phase 120:**置顶**。
+        if let p = pinned, item.isPinned != p { return false }
         if let m = model, item.model != m { return false }
         if let c = color, item.color != c { return false }
         if let v = version, item.version != v { return false }
