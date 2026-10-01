@@ -1,5 +1,79 @@
 # Whereabouts 更新日志 / Changelog
 
+## 1.1 (build 2) — 2026-10-01
+
+### Phase 122
+
+这一批是上架后的「同步可靠性 + 数据安全」修整:让 Mac ↔ iPhone 的 iCloud 同步及时、看得见,堵上几处会误删、复活或复制数据的漏洞,再加一轮双端问题修复。/ This batch is a post-launch pass on sync reliability and data safety: Mac ↔ iPhone iCloud sync becomes timely and visible, several holes that could wrongly delete, resurrect or duplicate your data are closed, and a round of fixes lands on both platforms.
+
+**🎯 亮点 / Highlights**
+
+- **iCloud 同步真正及时了**:iPhone 版现在能在后台接收 iCloud 的静默推送,Mac 版也会注册推送,另一台设备的改动一般几秒到一两分钟内就会出现,不用再等下次打开 app(静默推送不需要你开通知权限)。iPhone 切到后台前会先保存还没存的改动,确保它们能传上 iCloud。/ **iCloud sync is finally timely**: the iPhone app can now receive iCloud's silent push notifications in the background and the Mac app registers for them too, so changes from your other device usually show up within seconds to a minute or two instead of waiting until you next open the app (silent pushes don't need notification permission). Before the iPhone app goes to the background, it saves any pending changes so they get uploaded.
+- **设置里看得到 iCloud 同步状态了**:iCloud 区块(macOS 在「通用」页)新增 ①「iCloud 账号」状态(已登录 / 未登录 / 受限 / 暂时不可用);②「账号识别码」—— 苹果不允许 app 读取 Apple ID 邮箱,两台设备上这串码相同,就是同一个 iCloud 账号;③「上次收到改动」和「上次上传改动」的时间;④ 同步出错时用一句话说明原因(比如 iCloud 储存空间已满),网络抖动这类会自动恢复的问题不打扰你;⑤ 真正的「立即同步」:先保存改动,等这一轮上传和下载跑完,再告诉你结果。iPhone 首页的同步按钮和下拉刷新也改成同样的做法。/ **iCloud sync status is now visible in Settings**: the iCloud section (under General on macOS) adds ① your "iCloud Account" status (signed in / not signed in / restricted / temporarily unavailable); ② an "Account ID" — Apple doesn't let apps read your Apple ID email, so if this code matches on two devices, they're on the same iCloud account; ③ "Last received" and "Last sent" times; ④ sync errors explained in one plain sentence (e.g. iCloud storage is full), while self-recovering hiccups such as network blips stay quiet; ⑤ a real "Sync Now" that saves your changes, waits for the current upload and download round to finish, then reports the result. The sync button and pull-to-refresh on the iPhone home screen now work the same way.
+
+**✨ 新增 / Added**
+
+- **没登录 iCloud 时有明确指引**:iCloud 区块底部会说明数据暂时只存在本机,并提示到系统「设置」登录与另一台设备相同的 Apple 账户,登录后自动开始同步。/ **Clear guidance when you're not signed in to iCloud**: the iCloud section explains that your data is only on this device for now and asks you to sign in to the same Apple Account as your other device in system Settings; syncing then starts automatically.
+- **(iOS)欢迎页的 iCloud 开关会提示何时生效**:首次引导时改了 iCloud 同步开关,会显示「改动将在下次打开 app 时生效」。/ **(iOS) The iCloud switch on the welcome screen says when it takes effect**: changing it during onboarding now shows "Takes effect the next time you open the app."
+
+**🔧 改进 / Changed**
+
+- **iCloud 云盘备份改为只写不读、每台设备一个文件**:设置 → 数据里的「手动同步」改名「iCloud 云盘备份」,按钮改为「立即备份」,只写本机的备份,不再读取、合并其它设备的文件。每台设备各写一个文件(如 `whereabouts-backup-iPhone-3F2A.json`),刚装好、数据还没同步下来的新设备不会再用几条数据覆盖 Mac 的完整备份;一件物品都没有时也不写空备份。要从备份恢复,在设置 → 数据里用「导入」选那个文件。/ **iCloud Drive backup is now write-only, one file per device**: "Manual Sync" in Settings → Data is now "iCloud Drive Backup" with a "Back Up Now" button; it only writes this device's backup and never reads or merges other devices' files. Each device writes its own file (e.g. `whereabouts-backup-iPhone-3F2A.json`), so a freshly installed device whose data hasn't synced yet can no longer overwrite your Mac's full backup with a handful of items, and an empty library no longer writes an empty backup. To restore, use Import in Settings → Data and pick that file.
+- **(iOS)编辑表单有未保存的改动时不能下滑关闭**:需要点「取消」放弃或「完成」保存,不会下滑一下就把改动悄悄留下。/ **(iOS) The edit sheet can't be swiped away while it has unsaved changes**: tap Cancel to discard or Done to save, so a swipe-down no longer quietly keeps your edits.
+- **(iOS)欢迎页的隐私说明更新**:「数据全在本机,没有账号、没有服务器」改为「数据只在你的设备和你自己的 iCloud 里,没有注册、没有第三方服务器」,与开启 iCloud 同步后的实际情况一致。/ **(iOS) Updated privacy line on the welcome screen**: "Everything stays on your device — no account, no server" now reads "Your data stays on your devices and in your own iCloud — no sign-up, no third-party server", matching how things work with iCloud sync.
+- **(macOS)一次录入里位置写法相同的几条只问一次**:比如「钥匙、耳机在抽屉第一层」撞上多个同名位置时,选一次就把两件都放进去。/ **(macOS) One question for items that share a location**: when "keys and earbuds in the top drawer" matches several locations with the same name, one choice now files both items.
+
+**🐛 修复 / Fixed**
+
+*iCloud 同步与数据安全 / iCloud sync & data safety*
+
+- **移到回收站的物品同步不到另一台设备,另一台一编辑还会把它「复活」**:原因是旧的回收站标记与系统保留的同名属性冲突,传到 iCloud 的永远是「未删除」;现在改用能正常同步的删除时间来判断。更新后,之前在别的设备上删过、这边却还显示的物品会归入回收站,想留的可以在回收站还原。/ **Items moved to the Trash never synced to your other device, and editing them there could bring them back**: the old trash flag clashed with a same-named system property, so iCloud always received "not deleted"; trash state now relies on the deletion date, which syncs normally. After updating, items that were trashed on another device but still showed here move to the Trash — restore any you want to keep.
+- **「立即同步」和下拉刷新会复活已删物品、复制出重复物品**:它们原来会合并 iCloud 云盘里的 JSON 备份,把删掉的物品从旧备份里带回来、把移动或改过名的物品多建一份,再经 iCloud 扩散到所有设备;现在只走 iCloud 实时同步。之前已经多出来的副本不会自动删除,需要手动清理。/ **"Sync Now" and pull-to-refresh could resurrect deleted items and create duplicates**: they used to merge the JSON backup in iCloud Drive, which brought deleted items back from old backups and made a second copy of anything moved or renamed — then spread it to every device through iCloud. They now use live iCloud sync only. Copies created earlier aren't removed automatically; please delete them by hand.
+- **第二台设备会多出一套重复的预设标签**:同名标签现在会自动合并(启动时和每次收到同步数据后),物品上的标签都保留。/ **A second device added a duplicate set of preset tags**: same-named tags are now merged automatically (at launch and whenever synced changes arrive), and every item keeps its tags.
+- **(iOS)第二台设备会往你的 iCloud 数据里放演示物品**:新装好后会先等 iCloud 的第一轮数据下来,iCloud 里已有数据就不放演示物品。演示数据的「一键清除」也只删演示用的位置,不再误删你自己的空位置,或物品还没同步下来的位置。/ **(iOS) A second device added demo items to your iCloud data**: a fresh install now waits for the first round of iCloud data and skips the demo items if your iCloud already has data. "Clear all" for the demo data now removes only the demo locations — never your own empty locations or ones whose items haven't synced yet.
+- **(macOS)新 Mac 首次打开会给同步过来的所有无标签物品自动打标签**:这个给早期版本用户准备的一次性迁移已停用,你特意没打标签的物品不会再被改,也不会再同步回所有设备。/ **(macOS) A new Mac auto-tagged every untagged item synced from iCloud on first launch**: this one-time migration meant for early-version users is retired, so items you deliberately left untagged are no longer changed and pushed back to all your devices.
+- **iCloud 同步开启时自动合并重复位置,可能误删子位置**:自动合并会连带删掉另一台设备上还没同步过来的子位置,所以同步开启时不再自动合并;重复的位置请到设置里的位置管理手动合并。/ **Auto-merging duplicate locations while iCloud sync was on could delete sub-locations**: it could also remove sub-locations from your other device that hadn't synced yet, so it no longer runs while sync is on. Merge duplicates by hand in location management in Settings.
+- **「清空所有数据」清不干净,也不一定同步到其它设备**:现在逐条删除,删除会同步到你的其它设备(开着 iCloud 同步时,其它设备也会一起清空);编辑历史一并清掉,置顶提醒一并撤销;删除出错时什么都不删,并显示原因。/ **"Clear all data" left things behind and didn't reliably sync**: records are now deleted one by one so the deletion reaches your other devices (with iCloud sync on, they're cleared too); edit history is removed as well and pinned reminders are cancelled; if something goes wrong, nothing is deleted and the reason is shown.
+- **本机数据库打不开时 app 每次启动都闪退**:现在会以临时模式打开,并在设置的 iCloud 区块提示「改动不会保存」;数据库文件原样保留,问题消除后下次启动照常读取。/ **The app crashed on every launch if its local database couldn't be opened**: it now opens in a temporary mode with a warning in the iCloud section of Settings that changes won't be saved; the database file is left untouched and is read normally on a later launch once the problem clears.
+
+*双端 / Both platforms*
+
+- **一次录入多条时,位置有歧义的只保留了最后一条**:位置撞上多个同名地方时,现在会逐条让你选,每一条都能保存。全部取消时原文留在输入框;macOS 上只取消其中几条时,会把没存的那几条放回输入框并提示。/ **When one entry had several items with ambiguous locations, only the last one was kept**: you're now asked about each in turn and every item can be saved. If you cancel them all, your text stays in the input box; on macOS, if you cancel only some, just those are put back into the box with a note.
+- **编辑表单点「取消」并不会撤销**:以前改动是边输入边生效的;现在名称、备注等字段、照片和标签都会恢复到打开表单时的样子,这次新建但没用上的标签也会删掉。macOS 上按 Esc 效果相同。/ **Cancel in the edit sheet didn't undo anything**: edits used to apply as you typed; now the fields (name, notes and so on), photo and tags all go back to how they were when you opened the sheet, and tags created in that session but left unused are removed. On macOS, Esc does the same.
+- **在编辑表单的标签列表里删标签,会把它从所有物品、所有设备上删掉**:左滑 / 长按(macOS 右键)现在只提供「从这件物品上移除」;要彻底删除标签,请到设置里的标签管理。/ **Deleting a tag from the edit sheet's tag list removed it from every item on every device**: swipe / long-press (right-click on macOS) now offers only "Remove from This Item"; to delete a tag everywhere, use tag management in Settings.
+- **在位置管理里重命名,每输入一个字这一行就跳位、输入框失焦(iPhone 上键盘会收起)**:现在按回车或离开输入框时才提交新名字;名字留空或与同一层级重名会自动还原。/ **Renaming in location management made the row jump and lose focus (closing the iPhone keyboard) after every character**: the new name is now applied when you press Return or leave the field; an empty name or one that clashes with a sibling is reverted.
+- **批量删除位置的确认框标题显示成「删除选中的 %lld 个位置?」**:现在显示实际数量。/ **The batch-delete confirmation for locations read "Delete %lld locations?"**: it now shows the actual number.
+- **置顶提醒没有及时更新**:本机刚置顶 / 取消置顶,或另一台设备的置顶改动同步过来后,提醒现在都会立即跟着变,不用重开 app。/ **Pinned-item reminders lagged behind**: pinning or unpinning an item here, or a pin change synced from another device, now updates reminders right away — no relaunch needed.
+- **系统日历设为佛历或和历时,录入里的年份会算错**:「2024年」现在总按公历年理解。/ **On devices set to the Buddhist or Japanese calendar, years in your input were misread**: "2024" is now always read as a Gregorian year.
+
+*macOS*
+
+- **关掉主窗口后,全局快捷键(默认 ⌥⌘N)、快速录入小窗的搜索和点提醒通知都没反应**:现在 app 只留在菜单栏时也都能用;小窗搜索需要新开主窗口时也不会丢掉关键词。/ **With the main window closed, the global shortcut (⌥⌘N by default), Quick Entry search and clicking a reminder did nothing**: they now work while the app lives only in the menu bar, and Quick Entry search no longer loses your query when it has to open a new main window.
+- **菜单栏的「打开主窗口」每点一次就多开一个窗口**:现在会把已开的主窗口拉到前面。/ **The menu bar's "Open window" opened another main window on every click**: it now brings the existing one to the front.
+- **关掉主窗口后再退出 app,不会写 iCloud 云盘备份**:现在退出时总会备份一次(开着多个主窗口也只写一次)。/ **Quitting after closing the main window skipped the iCloud Drive backup**: quitting now always writes one backup (just one, even with several main windows open).
+- **菜单栏录入会丢掉版本信息和原文,还容易建出重复位置**:现在跟主窗口一致 —— 保留版本(如容量)和原始输入(AI 理解要用),位置优先匹配你已有的写法,录完立即保存。/ **Entries from the menu bar dropped the version info and your original text, and easily created duplicate locations**: they now behave like the main window — the version (e.g. capacity) and original text (which AI uses) are kept, your existing locations are matched first, and entries are saved right away.
+- **录制全局快捷键时能录成危险组合**:现在必须包含 ⌘、⌥ 或 ⌃(单独 ⇧ 不算),并会拒绝劫持系统或常用操作的组合 —— 比如只带 ⌘ 的 ⌘Q / ⌘C、只带 ⌥ 的打字组合、切换输入法的 ⌃Space、截屏快捷键 —— 同时说明原因。新组合注册失败(可能已被其它 app 占用)时保留原来的键位,不会落得一个都不灵。/ **The hotkey recorder accepted dangerous combinations**: a shortcut now needs ⌘, ⌥ or ⌃ (⇧ alone doesn't count), and combos that would hijack system or everyday shortcuts — ⌘-only ones like ⌘Q / ⌘C, ⌥-only ones used to type special characters, ⌃Space for switching input sources, screenshot shortcuts — are rejected with an explanation. If a new shortcut can't be registered (another app may be using it), your previous one is kept instead of leaving you with none.
+- **有搜索或筛选时,从列表里删除一行可能把另一件物品移进回收站**:现在删的就是你选的那一件。/ **With a search or filter active, deleting a row from the list could send a different item to the Trash**: it now deletes the item you picked.
+- **详情页借出后的状态说明显示成「3 天前 · 」**:缺了动作,时间也不对;现在显示「借出去」和借出的时间。/ **After lending an item, the detail page's status caption read "3 days ago · "**: the action was missing and the time was wrong; it now shows "Lent to someone" and when it was lent.
+- **物品在另一台设备上被彻底删除时,本机正开着的编辑、借出、关联等弹窗可能导致闪退**:现在这些弹窗会安全关闭,选中列表和待确认的删除里也会去掉那件物品。/ **If another device permanently deleted an item while its edit, lend or related-items sheet was open here, the app could crash**: those sheets now close safely, and the item is dropped from your selection and any pending delete.
+
+*iOS*
+
+- **编辑物品时点照片的「换一张」,照片反而被删了**:同一行的几个按钮会被一起触发;现在每个按钮只响应自己。/ **Tapping "Replace" on an item's photo deleted the photo**: all the buttons in that row fired at once; each now responds only to its own tap.
+- **语音输入在提交后还会往输入框里写字**:提交、离开「记一条」页或切到后台时,听写会立即停止。/ **Voice input kept writing into the box after you submitted**: dictation now stops immediately when you submit, leave the Record tab, or switch away from the app.
+- **语音输入的几处毛病**:停止时最后一句不再丢失;没有可用麦克风时不再闪退;识别服务不可用(比如没网)和没给权限分开提示;来电等打断时自动停止,已识别的文字保留。/ **Voice input glitches**: the last words are no longer lost when you stop; no more crash when no microphone input is available; "speech recognition unavailable" (e.g. offline) is now reported separately from missing permissions; and interruptions such as phone calls stop dictation cleanly, keeping what was already recognized.
+- **几个弹窗在 iPhone 上超出屏幕宽度**:位置选择、批量编辑、编辑物品、关联物品这几个弹窗现在按屏幕宽度显示。/ **Several sheets were wider than the iPhone screen**: the location picker, batch edit, edit item and related-items sheets now fit the screen.
+- **点提醒通知后,如果不在「物品」页就看不到任何反应**:现在会自动切到「物品」页并搜出那件物品;app 没在运行时点通知也一样。/ **Tapping a reminder showed nothing unless you were on the Items tab**: it now switches to Items and searches for that item, even if the app wasn't running.
+- **多选菜单的分组标题错写成「删除 (N)」**:改为「批量编辑」;没选中任何物品时这些操作会置灰,不会再凭空建出一个没用的空位置。/ **The multi-select menu's group header wrongly read "Delete (N)"**: it now says "Batch Edit", and its actions are disabled when nothing is selected, so they can no longer create an empty, unused location.
+
+*AI*
+
+- **AI 理解偶发闪退**:批量处理或 iCloud 正在同步时偶尔会闪退,已修复;AI 处理期间被删掉的物品,结果会直接丢弃,不再写回。/ **Rare crashes during AI processing**: the app could occasionally crash while AI worked through a batch or while iCloud was syncing — fixed; results for items deleted mid-processing are now discarded instead of written back.
+- **说「2024年买的」,AI 会把购买日期存成精确到日的 2024-01-01**:现在只记到年(说到月就记到月);已经只记到年或月的日期,也不会被 AI 补出月份或日期。/ **For "bought in 2024", AI stored the purchase date as exactly 2024-01-01**: it now records just the year (or the month, if you said one), and dates you entered only to the year or month no longer get a made-up month or day from AI.
+- **AI 回复格式稍有偏差就整条失败**:回复在 JSON 前后多说了一句话、或把年份写成纯数字,现在都能正常解析;火山引擎拒答、被内容审核拦截或中转站回了异常内容时,统一提示「AI 返回了无法识别的响应」,不再抛出难懂的解析错误。/ **Slightly off-format AI replies failed outright**: extra text around the JSON or a year written as a bare number now parse fine; when Volcengine refuses, a content filter blocks the reply, or a relay returns something unexpected, you now see "AI returned an unrecognised response" instead of a cryptic decoding error.
+- **粘贴 API key 时带上的换行会让请求失败**:保存和读取 key 时都会去掉首尾的空格和换行,之前存进去的 key 也一样生效。/ **A newline pasted along with your API key could make requests fail**: leading and trailing spaces and newlines are now stripped when the key is saved and read, which also covers keys saved earlier.
+- **AI 设置里关于 key 存放位置的说明写错了**:原来写「以明文保存在偏好设置里」,实际存在系统钥匙串;现在改为「保存在本机系统钥匙串中,只用于向你选择的 AI 服务商发请求,不会同步或上传,开发者也看不到」。/ **The AI settings text described key storage wrongly**: it said the key was kept as plain text in preferences, but it's actually stored in the system Keychain; it now says the key lives in this device's Keychain, is used only to call the AI provider you chose, is never synced or uploaded, and can't be seen by the developer.
+
 ## v0.2.0 — 2026-07-07
 
 ### build 1 — 2026-07-07

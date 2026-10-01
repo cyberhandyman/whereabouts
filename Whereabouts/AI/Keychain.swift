@@ -25,7 +25,8 @@ enum Keychain {
             UserDefaults.standard.removeObject(forKey: legacyPrefix + account)
             return true
         }
-        let data = Data(value.utf8)
+        // Phase 122:存去掉首尾空白 / 换行后的值 —— 粘贴 key 常带尾随换行,原样存会让请求头带脏字符。
+        let data = Data(trimmed.utf8)
         // 先试更新,不存在再新增
         let updateStatus = SecItemUpdate(
             baseQuery(account: account) as CFDictionary,
@@ -55,12 +56,15 @@ enum Keychain {
         query[kSecMatchLimit] = kSecMatchLimitOne
         var out: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &out)
+        // Phase 122:读出也 trim(.whitespacesAndNewlines)—— 兼容修复前存进去的带换行旧值。
         if status == errSecSuccess, let data = out as? Data,
-           let s = String(data: data, encoding: .utf8), !s.isEmpty {
+           let s = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !s.isEmpty {
             return s
         }
         // 迁移路径:Keychain 没有 → 看旧 UserDefaults 明文,有就搬进 Keychain
-        if let legacy = UserDefaults.standard.string(forKey: legacyPrefix + account),
+        if let legacy = UserDefaults.standard.string(forKey: legacyPrefix + account)?
+               .trimmingCharacters(in: .whitespacesAndNewlines),
            !legacy.isEmpty {
             set(legacy, account: account)  // set 内部会删旧值
             return legacy

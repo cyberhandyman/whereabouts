@@ -14,7 +14,8 @@ import Carbon.HIToolbox
 /// 触发流程:
 ///   1. Carbon 调 `hotKeyHandler`(C 回调)
 ///   2. 回调里 post `Notification.Name.openQuickEntry` 通知
-///   3. App 主 scene 里有个隐藏观察器收到通知 → 用 `openWindow(id: "quickEntry")` 弹小窗
+///   3. Phase 122:app 级 `MainWindowRouter`(WhereaboutsApp.swift)收到通知 → `openWindow(id: "quickEntry")` 弹小窗
+///      (以前观察器挂在主窗口上,⌘W 关掉主窗口后快捷键就失灵了)
 ///
 /// 单例 `shared` 持有 EventHotKeyRef + EventHandlerRef,跨整个 app 生命周期。
 final class GlobalHotKey {
@@ -47,12 +48,24 @@ final class GlobalHotKey {
         UserDefaults.standard.set(Int(modifiers), forKey: "globalHotKey.modifiers")
     }
 
+    /// Phase 122:当前**真正注册成功**的那组键位(注册失败时用来恢复)。
+    private var registeredCombo: (keyCode: UInt32, modifiers: UInt32)?
+
     /// 注册当前生效的快捷键(默认或用户自定义)。已注册过会先注销再注册。
-    func registerDefault() {
+    /// Phase 122:返回 OSStatus;失败时自动恢复之前注册着的那组。
+    @discardableResult
+    func registerDefault() -> OSStatus {
+        register(keyCode: Self.currentKeyCode, modifiers: Self.currentModifiers)
+    }
+
+    /// Phase 122:注册指定键位。**不写 UserDefaults** —— 调用方确认成功后再 saveCustom。
+    /// 之前先 unregister 再注册,RegisterEventHotKey 失败时旧键已经没了、UI 却显示新键位,
+    /// 用户就落得"什么快捷键都不灵"。现在失败会把原来那组重新注册回去。
+    @discardableResult
+    func register(keyCode: UInt32, modifiers: UInt32) -> OSStatus {
+        let previous = registeredCombo
         unregister()
 
-        let modifiers = Self.currentModifiers
-        let keyCode   = Self.currentKeyCode
         let signature: OSType = OSType(0x57484241)  // 'WHBA' — 任意四字节,只是身份标识
         let hotKeyID = EventHotKeyID(signature: signature, id: 1)
 
@@ -73,7 +86,19 @@ final class GlobalHotKey {
                                          GetApplicationEventTarget(), 0, &ref)
         if status == noErr {
             self.hotKeyRef = ref
+            self.registeredCombo = (keyCode, modifiers)
+            return noErr
         }
+        // 失败 → 恢复原来那组(若原来就有)
+        if let prev = previous {
+            var prevRef: EventHotKeyRef?
+            if RegisterEventHotKey(prev.keyCode, prev.modifiers, hotKeyID,
+                                   GetApplicationEventTarget(), 0, &prevRef) == noErr {
+                self.hotKeyRef = prevRef
+                self.registeredCombo = prev
+            }
+        }
+        return status
     }
 
     func unregister() {
@@ -81,6 +106,48 @@ final class GlobalHotKey {
             UnregisterEventHotKey(r)
             hotKeyRef = nil
         }
+        registeredCombo = nil
+    }
+
+    // MARK: - Phase 122:键位校验
+
+    enum ComboCheck: Equatable {
+        case ok
+        /// 没有 ⌘ / ⌥ / ⌃(单独 ⇧ 不算 —— ⇧A 会吞掉所有大写 A)
+        case needsModifier
+        /// 跟系统 / 常用编辑快捷键或打字冲突(⌘Q、⌘C、⌘Tab、⌃Space、⌥A 打 å……)
+        case reserved
+    }
+
+    /// 校验用户捕获到的键位能不能当**全局**快捷键。
+    static func check(keyCode: UInt32, modifiers: UInt32) -> ComboCheck {
+        let cmd = UInt32(cmdKey), opt = UInt32(optionKey)
+        let ctrl = UInt32(controlKey), shift = UInt32(shiftKey)
+        let mods = modifiers & (cmd | opt | ctrl | shift)
+        guard mods & (cmd | opt | ctrl) != 0 else { return .needsModifier }
+        // 只有 ⌘(可带 ⇧ 以外):⌘+任意键都是各 app 菜单的地盘(⌘Q/W/C/V/X/Z/A/S/N/Tab/Space/`…),
+        // 全局注册会把它们全劫持掉。
+        if mods == cmd { return .reserved }
+        // 只有 ⌥ 或 ⌥⇧:这些组合在键盘上是"打特殊字符"(⌥A=å、⌥Space=不换行空格)。
+        if mods == opt || mods == (opt | shift) { return .reserved }
+        // 其余组合:逐条列出系统 / 编辑常用的那几个
+        let reservedByMods: [UInt32: [Int]] = [
+            // ⌘⇧Z 重做、⌘⇧3/4/5/6 截屏、⌘⇧Q 注销、⌘⇧Tab 反向切 app
+            cmd | shift: [kVK_ANSI_Z, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5, kVK_ANSI_6,
+                          kVK_ANSI_Q, kVK_Tab],
+            // ⌃Space 切输入法;⌃A/E/K/N/P/F/B/D/H/T/O/Y/V 是全系统文本框的 Emacs 编辑键
+            ctrl: [kVK_Space, kVK_ANSI_A, kVK_ANSI_E, kVK_ANSI_K, kVK_ANSI_N, kVK_ANSI_P,
+                   kVK_ANSI_F, kVK_ANSI_B, kVK_ANSI_D, kVK_ANSI_H, kVK_ANSI_T, kVK_ANSI_O,
+                   kVK_ANSI_Y, kVK_ANSI_V],
+            // ⌃⌥Space 切输入法
+            ctrl | opt: [kVK_Space],
+            // ⌃⌘Q 锁屏、⌃⌘F 全屏、⌃⌘Space 表情与符号、⌃⌘D 查词典
+            ctrl | cmd: [kVK_ANSI_Q, kVK_ANSI_F, kVK_Space, kVK_ANSI_D],
+            // ⌥⌘Space Finder 搜索、⌥⌘D 隐藏程序坞、⌥⌘H 隐藏其他、⌥⌘W 关闭全部窗口
+            opt | cmd: [kVK_Space, kVK_ANSI_D, kVK_ANSI_H, kVK_ANSI_W],
+        ]
+        if reservedByMods[mods]?.contains(Int(keyCode)) == true { return .reserved }
+        return .ok
     }
 }
 

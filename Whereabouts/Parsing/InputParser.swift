@@ -814,7 +814,12 @@ enum InputParser {
             let d: Int = spec.groupCount >= 3 ? (Int(ns.substring(with: match.range(at: 3))) ?? 1) : 1
             var comps = DateComponents()
             comps.year = y; comps.month = m; comps.day = d
-            guard let date = Calendar.current.date(from: comps) else { continue }
+            // Phase 122:用户写的 "2024年" 永远是公历年 —— 固定 Gregorian(+ POSIX、当前时区,仍存本地零点),
+            // 不用 Calendar.current,否则佛历 / 和历设备会把 2024 当纪年解析。
+            var cal = Calendar(identifier: .gregorian)
+            cal.locale = Locale(identifier: "en_US_POSIX")
+            cal.timeZone = .current
+            guard let date = cal.date(from: comps) else { continue }
             var stripped = raw
             if let r = Range(match.range, in: stripped) {
                 stripped.removeSubrange(r)

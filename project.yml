@@ -46,8 +46,8 @@ settings:
     DEVELOPMENT_TEAM: "6893263DW5"
     CODE_SIGN_STYLE: Automatic
     ENABLE_PREVIEWS: YES
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "2"
     # 自己提供 Info.plist,不让 Xcode 自动生成(部分 key 它不让我们改,比如 CFBundleIconFile)
     GENERATE_INFOPLIST_FILE: NO
 

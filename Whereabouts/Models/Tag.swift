@@ -35,6 +35,43 @@ final class Tag {
     }
 }
 
+extension Tag {
+    /// Phase 122:合并同名标签 —— 多设备同步后的"双胞胎"。
+    ///
+    /// 来源:每台设备首启都会 seed 一套预设标签(hasSeedTags 是本机偏好),第二台设备
+    /// seed 时 CloudKit 数据还没下来 → 同步后每个预设标签出现两份。
+    /// 规则:同名(去首尾空白后完全相同)的一组里保留**最早创建**的那个,其余的挂载
+    /// 转给它后删除。按 createdAt → name → colorHex 排序,所有设备选出的保留者一致,
+    /// 两台设备同时跑也不会互删对方的保留者。删 tag 是 nullify,不会连带删物品。
+    @MainActor
+    @discardableResult
+    static func mergeDuplicates(in context: ModelContext) -> Int {
+        let all = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        var groups: [String: [Tag]] = [:]
+        for t in all {
+            groups[t.name.trimmingCharacters(in: .whitespacesAndNewlines), default: []].append(t)
+        }
+        var merged = 0
+        for (_, group) in groups where group.count > 1 {
+            let sorted = group.sorted { a, b in
+                if a.createdAt != b.createdAt { return a.createdAt < b.createdAt }
+                if a.name != b.name { return a.name < b.name }
+                return a.colorHex < b.colorHex
+            }
+            let survivor = sorted[0]
+            for dup in sorted.dropFirst() {
+                for item in dup.items where !item.tags.contains(where: { $0 === survivor }) {
+                    item.tags.append(survivor)
+                }
+                context.delete(dup)
+                merged += 1
+            }
+        }
+        if merged > 0 { try? context.save() }
+        return merged
+    }
+}
+
 /// Finder 风格的固定调色板:7 色 + 2 个扩展。
 /// 用户新建 tag 时从这里选,而不是给随便选颜色 —— 8 个够分类,不需要 RGB 拾色器。
 enum TagPalette {

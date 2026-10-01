@@ -121,7 +121,7 @@ enum RelatedGroup {
     static func peers(of item: Item, in context: ModelContext) -> [Item] {
         guard let gid = item.relatedGroupID else { return [] }
         return members(of: gid, in: context).filter {
-            $0.persistentModelID != item.persistentModelID && !$0.isDeleted
+            $0.persistentModelID != item.persistentModelID && $0.deletedAt == nil
         }
     }
 }

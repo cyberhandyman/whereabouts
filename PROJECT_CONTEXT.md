@@ -33,8 +33,16 @@
 **iCloud 双端同步(Phase 116-117,2026-07-08 上线)**:
 - CloudKit 私有库 `iCloud.com.bamcope.whereabouts`,SwiftData cloudKitDatabase(AppContainer 工厂,失败静默回退本地);**CloudKit 硬性要求已满足**:全部属性带默认值、全部关系可选(XxxStorage 可选存储 + 非可选门面,门面同旧名 → 调用点零改动)、LocationLog.location 的反向在 Location.logsStorage。
 - **坑**:①关系不满足要求时 ModelContainer 能创建、**异步 mirror setup 才抛错**(134060 日志);②无 entitlements 的构建(CODE_SIGNING_ALLOWED=NO)运行时 CKContainer **必崩**(SIGTRAP)→ 模拟器构建不要关签名,用默认 "Sign to Run Locally";③模拟器/Desktop 的 derivedData 都放 /tmp(hechu-dd / hechu-dd-sim)避 xattr。
-- iCloud Drive JSON 自动备份(CloudBackup):iOS 退后台 / macOS 退出时写 `iCloud Drive/Whereabouts/whereabouts-backup.json`;设置→数据有"立即备份"。entitlements 加了 CloudDocuments + ubiquity 容器,Info.plist 加 NSUbiquitousContainers。
+- iCloud Drive JSON 自动备份(CloudBackup):iOS 退后台 / macOS 退出时写 `iCloud Drive/Whereabouts/` 下的 JSON(Phase 122 起每台设备一个文件、只写不读);设置→数据有"立即备份"。entitlements 加了 CloudDocuments + ubiquity 容器,Info.plist 加 NSUbiquitousContainers。
 - 签名:Team 6893263DW5 已注册本机为开发设备(ASC API);macOS 构建 `-allowProvisioningUpdates`(走 Xcode 登录态;xcodebuild 的 -authenticationKey* 参数对这把 ASC key 反而报 bearer token 错,别用)。
+**iCloud 同步体检(Phase 122,2026-10-01,用两个隔离测试实例实测)**:
+- **回收站从没同步过(线上 bug)**:`Item.isDeleted` 与 NSManagedObject 自带 `isDeleted` 撞名,CloudKit 镜像按 KVC 导出拿到系统那个(永远 false)→ 移到回收站不同步,另一台设备改一下该记录还会把它"复活"。改为**回收站唯一依据 = `deletedAt != nil`**(`Item.isTrashed`,所有 #Predicate 已换);isDeleted 字段保留照写(改名要动线上 CloudKit schema);启动时 `Item.reconcileTrashState` 对账。**以后任何 @Model 字段都别用 NSManagedObject 已有的名字**(isDeleted / description / hasChanges…)。
+- **"手动同步"/下拉刷新曾经拉 iCloud 云盘 JSON 合并** → 复活已删物品、复制移动/改名过的物品。现在只走 CloudKit:`CloudSyncMonitor.syncNow` = save + 等 CloudKit 事件跑完 + 报告收发时间。JSON 备份只写不读,每台设备一个文件 `whereabouts-backup-<iPhone|iPad|Mac>-<4位>.json`(Debug 构建加 `debug-` 前缀,碰不到正式备份),恢复走"导入"。
+- iOS Info.plist 加 `UIBackgroundModes: remote-notification`;两端 app delegate 显式 registerForRemoteNotifications;Mac 退出备份挪到 `MacAppDelegate.applicationWillTerminate`。
+- 设置页 iCloud 区块(`Shared/ICloudStatusRows`,双端共用):账号状态 + **账号识别码**(CloudKit 用户记录 ID 的 SHA256 前 8 位;苹果不给 app 读 Apple ID 邮箱,两台设备识别码相同 = 同一账号)+ 上次收到/上传 + 友好错误 + 立即同步。事件来源 `NSPersistentCloudKitContainer.eventChangedNotification`(SwiftData 底层照常广播)。
+- 多设备污染修复:预设标签按名去重(`Tag.mergeDuplicates`,保留最早 createdAt,确定性);iOS 演示数据等首轮 CloudKit 导入后确认云端为空才灌;清演示只删演示路径的位置;CloudKit 在线时**不自动合并重复位置**(根节点 cascade 删除会连带删掉另一台设备还没同步来的子位置);Phase 22 的"自动补标签迁移"停用(新 Mac 首次打开会给同步来的所有无标签物品乱挂标签)。
+- **CoreData 同步时机(实测)**:导入只在 ① 启动 ② app 被激活(`AppActivationImport`,macOS/iOS 都有,激活后约 3 秒到达)③ 收到 CloudKit 静默推送 时发生;没有公开 API 能强制拉取。导出由系统后台任务调度,通常 1 秒内,偶尔被推迟到下次激活。同一台 Mac 上两个实例互相收不到推送(苹果不推给发起改动的设备),推送延迟只能用第二台设备验证。
+- 测试方法(不碰本机正式版数据):测试快照 + 独立 bundle id(`com.bamcope.whereabouts.synctest` / `.synctest2`,已在开发者账号注册)+ 沙箱 + CloudKit **开发环境** + DEBUG-only 测试驱动;app 必须放在非临时目录并 lsregister,否则 usernoted 判定"missing app"丢弃推送。新 App ID 绑定 iCloud 容器后服务器端约 10 分钟生效(之前报 "Invalid bundle ID for container")。
 **Phase 117 其它**:iOS 语音录入(SpeechInput,SFSpeechRecognizer,记一条 tab 麦克风按钮);引导手势页 KeyframeAnimator 循环动画演示(右滑/左滑/长按);作者名改 Chengzhu Zhao;iOS 设置页大标题「J人养成器 - 何处」;名言库 Shared/QuoteBank 双端共用,iOS 首页底部 12s 滚动。付费功能已明确取消,app 永久全免费。
 
 ---

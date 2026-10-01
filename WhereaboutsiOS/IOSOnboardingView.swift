@@ -75,6 +75,9 @@ struct IOSOnboardingView: View {
 
     /// Phase 118:欢迎页直接给 iCloud 同步开关 —— 第一屏就把多设备心智建立起来。
     @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
+    /// Phase 122:打开引导时的开关值。数据容器在 app 启动时就按它建好了(CloudKit 与否运行中切不了),
+    /// 这里改开关要下次启动才生效 —— 跟打开时不一致就提示一行,免得用户以为已经关掉 / 打开了。
+    @State private var icloudPrefAtOpen: Bool = AppContainer.syncPreferred
 
     private var welcomePage: some View {
         pageScaffold(
@@ -108,6 +111,13 @@ struct IOSOnboardingView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 2)
+            if icloudSyncEnabled != icloudPrefAtOpen {
+                Label("settings.icloud.restartHint", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .transition(.opacity)
+            }
         }
     }
 

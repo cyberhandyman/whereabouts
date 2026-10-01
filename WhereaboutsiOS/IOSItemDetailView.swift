@@ -10,7 +10,7 @@ struct IOSItemDetailView: View {
     @Bindable var item: Item
 
     @Query private var allTags: [Tag]
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var allItems: [Item]
 

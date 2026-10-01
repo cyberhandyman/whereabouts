@@ -87,6 +87,8 @@ final class NotificationScheduler {
     /// Phase 108:之前调的 `cancelAll()` 走的是空 identifier list 的 dead-code,
     /// 老通知永远不会真删,改成 async 版 `cancelAllCheckups()` 用 prefix 精确清。
     func rescheduleIfEnabled() {
+        // Phase 122:内存兜底库里没有真实的置顶物品,重排只会把用户已有的提醒全撤掉。
+        guard !AppContainer.usingInMemoryFallback else { return }
         Task { @MainActor in
             await cancelAllCheckups()
             guard enabled else { return }
@@ -103,16 +105,19 @@ final class NotificationScheduler {
 
     private func scheduleForAllPinned() async {
         guard let container else { return }
-        let context = ModelContext(container)
+        // Phase 122:用主 context —— 新建的 ModelContext 只看得到已落盘的数据,
+        // 刚点的置顶 / 刚改的名字(还没自动保存)会被漏掉。
+        let context = container.mainContext
         // 只对未删除的置顶物品调度。
         let descriptor = FetchDescriptor<Item>(
-            predicate: #Predicate<Item> { $0.isPinned && !$0.isDeleted }
+            predicate: #Predicate<Item> { $0.isPinned && $0.deletedAt == nil }
         )
         guard let pinned = try? context.fetch(descriptor) else { return }
 
         // Phase 99:用户在偏好设置选了频率 / 时间 / 模板,每件置顶物品只调度 **1 个** trigger
         // (老版本是 12 / 18 两个,每件占 2 slot —— 现在 1 件 1 slot,容量翻倍)。
-        for item in pinned {
+        // 系统最多保留 64 条待发通知,超出的会被静默丢弃 —— 显式截断,留点余量。
+        for item in pinned.prefix(60) {
             schedule(for: item)
         }
     }

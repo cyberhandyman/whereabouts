@@ -112,11 +112,17 @@ final class Item {
     var lastActionType: String?
 
     // MARK: - 软删除(回收站)
-    /// 真删之前先 soft delete:isDeleted=true、隐藏出主列表 / 搜索 / facet / 状态栏统计,
+    /// 真删之前先 soft delete:隐藏出主列表 / 搜索 / facet / 状态栏统计,
     /// 但数据完整保留,可在"回收站"窗口右键还原。
-    /// SwiftData 轻量迁移:旧记录默认 false。
+    ///
+    /// ⚠️ Phase 122:**判断"在不在回收站"一律用 `deletedAt != nil`(或 `isTrashed`),
+    /// 不要用这个字段。** 它跟 NSManagedObject 自带的 `isDeleted`(对象是否已从 context
+    /// 删除)撞名 —— CloudKit 镜像导出时按 KVC 取值,拿到的是系统那个(永远 false),
+    /// 所以"移到回收站"从来没同步到别的设备,另一台设备一改这条记录还会把它"复活"
+    /// (Phase 122 用两个测试实例实测确认)。`deletedAt` 是普通字段,能正常同步。
+    /// 字段本身保留(改名要动 CloudKit 线上 schema),markDeleted / restore 仍同步写它。
     var isDeleted: Bool = false
-    /// 被 soft delete 的时间。还原时清回 nil。
+    /// 被 soft delete 的时间。还原时清回 nil。**回收站状态的唯一依据**(见上)。
     var deletedAt: Date?
 
     // MARK: - 借出去(Phase 91)
@@ -145,7 +151,25 @@ final class Item {
 }
 
 extension Item {
-    /// 软删除 —— 标 isDeleted,不真删。回收站里可还原 / 彻底删除。
+    /// 在不在回收站。Phase 122:以 deletedAt 为准(isDeleted 不经 CloudKit 同步,见字段注释)。
+    var isTrashed: Bool { deletedAt != nil }
+
+    /// Phase 122:启动时对账一次 —— 老版本里只置了 isDeleted、没有 deletedAt 的条目
+    /// (理论上不会有,markDeleted 一直两个都写)补上 deletedAt,保证换判断依据后
+    /// 回收站里的东西不会突然回到主列表。返回修正条数。
+    @MainActor
+    @discardableResult
+    static func reconcileTrashState(in context: ModelContext) -> Int {
+        let descriptor = FetchDescriptor<Item>(predicate: #Predicate<Item> { $0.isDeleted && $0.deletedAt == nil })
+        guard let stale = try? context.fetch(descriptor), !stale.isEmpty else { return 0 }
+        for item in stale {
+            item.deletedAt = item.updatedAt
+        }
+        try? context.save()
+        return stale.count
+    }
+
+    /// 软删除 —— 标 deletedAt(+ isDeleted),不真删。回收站里可还原 / 彻底删除。
     func markDeleted() {
         self.isDeleted = true
         self.deletedAt = .now

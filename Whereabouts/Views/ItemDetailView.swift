@@ -468,7 +468,7 @@ struct ItemDetailView: View {
     /// 这里需要走 modelContext 查 —— 详情视图没注 @Query。
     private var recentLocationsForEditor: [Location] {
         let descriptor = FetchDescriptor<Item>(
-            predicate: #Predicate<Item> { !$0.isDeleted },
+            predicate: #Predicate<Item> { $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Item.lastSeenAt, order: .reverse)]
         )
         let items = (try? modelContext.fetch(descriptor)) ?? []
@@ -1024,19 +1024,26 @@ struct ItemDetailView: View {
     /// (lastSeenAt 在 "他还在原位"/"放回"/"不知道" 都更新,只在 saveNewLocation 里
     /// 才真的代表 "moved")。这里简单处理:强调态就显示 caption。
     private func isEmphosizedCaptionVisible(isEmphasized: Bool, actionType: String) -> Bool {
-        isEmphasized && item.lastSeenAt > item.createdAt
+        // Phase 122:借出不动 lastSeenAt(markLentOut 只写 lentAt),按 lentAt 判断
+        if actionType == "lent_out" { return isEmphasized && item.lentAt != nil }
+        return isEmphasized && item.lastSeenAt > item.createdAt
     }
 
     /// 拼 caption:"5 分钟前 · 放回原位了"。
     /// `.formatted(.relative(presentation: .named))` 走系统 locale —— 中文 "5 分钟前",英文 "5 min ago"。
     private func lastActionCaption(actionType: String, titleKey: LocalizedStringKey) -> String {
-        let timeText = item.lastSeenAt.formatted(.relative(presentation: .named))
+        // Phase 122:借出的时间是 lentAt(lastSeenAt 不随借出更新)
+        let when = actionType == "lent_out" ? (item.lentAt ?? item.lastSeenAt) : item.lastSeenAt
+        let timeText = when.formatted(.relative(presentation: .named))
         let labelKey: String
         switch actionType {
         case "stillThere": labelKey = "detail.used.button.stillThere"
         case "putBack":    labelKey = "detail.used.button.putBack"
         case "moved":      labelKey = "detail.used.button.moved"
         case "unknown":    labelKey = "detail.used.button.unknown"
+        // Phase 122:原来落到 default 的 "",caption 变成 "3 天前 · "。
+        // 用时间线同款的"借出去"(按钮标题"借给…"带省略号,不适合当过去式说明)。
+        case "lent_out":   labelKey = "history.source.lentOut"
         default:           labelKey = ""
         }
         let actionText = NSLocalizedString(labelKey, comment: "")

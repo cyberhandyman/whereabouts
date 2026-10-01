@@ -37,7 +37,7 @@ enum WhereaboutsImporter {
         var existingSignatures: Set<String> = []
         if dedup {
             let allItems: [Item] = (try? context.fetch(FetchDescriptor<Item>())) ?? []
-            for it in allItems where !it.isDeleted {
+            for it in allItems where !it.isTrashed {
                 existingSignatures.insert(signature(name: it.name, locationPath: it.location?.path))
             }
         }

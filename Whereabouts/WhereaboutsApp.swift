@@ -5,8 +5,29 @@ import UserNotifications
 // Phase 111:AppearanceMode / AppLanguage 挪到 Shared/AppPrefs.swift ——
 // iOS target 的设置页复用同一对枚举。本文件只进 macOS target。
 
+/// Phase 122:app 级生命周期 ——
+///   - 注册远程推送:CloudKit 靠静默推送告诉 Mac"iPhone 那边有改动",没注册的话
+///     常驻后台的 Mac 版要等下次重启才拉得到(用户反馈"很久才同步"的主因之一)
+///   - 退出时写 iCloud 云盘备份:原来挂在主窗口 ContentView 上,⌘W 关掉主窗口后
+///     从菜单栏退出就不备份了;开两个主窗口又会写两遍。挪到这里只跑一次。
+final class MacAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if AppContainer.syncPreferred {
+            NSApplication.shared.registerForRemoteNotifications()
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        guard let container = AppContainer.current else { return }
+        let ctx = container.mainContext
+        if ctx.hasChanges { try? ctx.save() }
+        CloudBackup.backUpBlocking(context: ctx)
+    }
+}
+
 @main
 struct WhereaboutsApp: App {
+    @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var appDelegate
     @AppStorage("appLanguage") private var appLanguage: AppLanguage = .system
     @AppStorage("appearance") private var appearance: AppearanceMode = .system
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon: Bool = true
@@ -43,6 +64,8 @@ struct WhereaboutsApp: App {
             GlobalHotKey.shared.registerDefault()
         }
         #endif
+        // Phase 122:监听 CloudKit 收发事件 + 查 iCloud 账号(设置页显示用)。
+        CloudSyncMonitor.shared.start()
     }
 
     var body: some Scene {
@@ -50,7 +73,14 @@ struct WhereaboutsApp: App {
             // SwiftUI Text / LocalizedStringKey 立刻跟随 environment locale。
             // 但 String(localized:) 是进程级 Bundle lookup,需要 AppleLanguages UserDefaults
             // (由 SettingsView 在切换时写入)+ 应用重启才能完全生效 —— 见 SettingsView 的提示。
-            ContentView()
+            Group {
+                // Phase 122:本地库没打开时只显示阻断页(带"退出"按钮),不让用户往临时内存库里录东西。
+                if AppContainer.usingInMemoryFallback {
+                    StoreUnavailableView()
+                } else {
+                    ContentView()
+                }
+            }
                 .environment(\.locale, appLanguage.explicitLocale ?? Locale.autoupdatingCurrent)
                 .preferredColorScheme(appearance.colorScheme)
                 // Phase 74:给主窗口一个最小尺寸,防止过小撑爆 inputBar / status bar
@@ -138,6 +168,9 @@ struct WhereaboutsApp: App {
 struct OpenHelpWindowMenuItem: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
+        // Phase 122:菜单命令在启动时就构建、不依赖任何窗口 —— 借这里把 app 级的
+        // openWindow 交给 MainWindowRouter(同时让它开始监听快捷键 / 搜索 / 通知点击)。
+        let _ = MainWindowRouter.shared.register(openWindow, persistent: true)
         Button("help.menu.label") {
             openWindow(id: "help")
         }
@@ -145,16 +178,120 @@ struct OpenHelpWindowMenuItem: View {
     }
 }
 
-/// Phase 89:挂在主 ContentView 上 —— 收到 .openQuickEntry 通知就 openWindow。
-/// 通过 view modifier 注入到 scene 里,这样能拿到 SwiftUI 的 @Environment(\.openWindow)。
+/// Phase 122:app 级窗口路由。
+///
+/// 以前 `.openQuickEntry`(全局快捷键)/ `.quickEntrySearch`(小窗搜索)/ `.openItemByName`
+/// (点置顶通知)的监听都挂在主窗口 ContentView 上 —— ⌘W 关掉主窗口后 app 还在菜单栏常驻,
+/// 但这三样全都没反应;小窗搜索还是"先 post 再 openWindow",新开的窗口收不到 query。
+///
+/// 现在:
+///   - 单例在 app 启动时(菜单命令构建时)创建,监听上面三个通知(名字不变,旧 post 方照常有效)
+///   - 任一 scene 出现时把 `OpenWindowAction` 交进来;菜单命令那份全程有效,优先用
+///   - 要搜索 / 定位物品时先存成 `pendingRoute`,再唤醒已开的主窗口(发 `.mainWindowRouteReady`)
+///     或新开一个;ContentView 在 onAppear / 收到通知时 `consumePendingRoute()` 取走
+@MainActor
+final class MainWindowRouter {
+    static let shared = MainWindowRouter()
+
+    enum Route: Equatable {
+        /// 小窗"搜索"模式:关键词写进搜索框 + 展开 facet
+        case search(String)
+        /// 点置顶通知:清掉旧筛选再按名字搜,确保目标物品可见
+        case focusItem(name: String)
+    }
+
+    private var openWindowAction: OpenWindowAction?
+    private var hasPersistentAction = false
+    private(set) var pendingRoute: Route?
+    /// 当前活着的主窗口数(ContentView onAppear +1 / onDisappear -1)。
+    /// WindowGroup 的 openWindow(id:) 每次都**新开**一个窗口,所以已有主窗口时改为唤醒它。
+    private var liveMainWindows = 0
+    private var observers: [NSObjectProtocol] = []
+
+    private init() {
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: .openQuickEntry, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { MainWindowRouter.shared.showQuickEntry() }
+        })
+        observers.append(center.addObserver(forName: .quickEntrySearch, object: nil, queue: .main) { note in
+            guard let q = note.userInfo?["query"] as? String, !q.isEmpty else { return }
+            MainActor.assumeIsolated { MainWindowRouter.shared.showMain(route: .search(q)) }
+        })
+        observers.append(center.addObserver(forName: .openItemByName, object: nil, queue: .main) { note in
+            guard let name = note.userInfo?["itemName"] as? String, !name.isEmpty else { return }
+            MainActor.assumeIsolated { MainWindowRouter.shared.showMain(route: .focusItem(name: name)) }
+        })
+    }
+
+    /// 交来一个 openWindow。persistent = 菜单命令那份(跟 app 同寿命);
+    /// 窗口里拿到的只在还没有任何一份时兜底。
+    func register(_ action: OpenWindowAction, persistent: Bool) {
+        if persistent {
+            openWindowAction = action
+            hasPersistentAction = true
+        } else if !hasPersistentAction {
+            openWindowAction = action
+        }
+    }
+
+    func mainWindowDidAppear() { liveMainWindows += 1 }
+    func mainWindowDidDisappear() { liveMainWindows = max(0, liveMainWindows - 1) }
+
+    /// 弹快速录入小窗(Window scene:已开就拉到前台)。
+    func showQuickEntry() {
+        openWindowAction?(id: "quickEntry")
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// 打开 / 唤醒主窗口;带 route 时先暂存,窗口那边取走后应用。
+    func showMain(route: Route? = nil) {
+        if let route { pendingRoute = route }
+        // 点通知冷启动时,主窗口可能已建好但 ContentView 还没 onAppear(计数仍是 0)——
+        // 再看一眼 NSApp.windows,免得多开一个;那个窗口 onAppear 时会自己取走 route。
+        let existing = existingMainWindow()
+        if liveMainWindows > 0 || existing != nil {
+            if route != nil {
+                NotificationCenter.default.post(name: .mainWindowRouteReady, object: nil)
+            }
+            if let w = existing {
+                if w.isMiniaturized { w.deminiaturize(nil) }
+                w.makeKeyAndOrderFront(nil)
+            }
+        } else {
+            openWindowAction?(id: "main")
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// ContentView 取走待处理的路由(取一次就清空,多个主窗口时只有一个会应用)。
+    func consumePendingRoute() -> Route? {
+        defer { pendingRoute = nil }
+        return pendingRoute
+    }
+
+    /// 已有的主窗口(可见或最小化)。SwiftUI 给 WindowGroup(id: "main") 的窗口 identifier
+    /// 以 "main" 开头;万一找不到也无妨 —— 主判断靠 liveMainWindows,activate 至少把 app 拉到前台。
+    private func existingMainWindow() -> NSWindow? {
+        let mains = NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix("main") == true }
+        return mains.first(where: { $0.isVisible }) ?? mains.first(where: { $0.isMiniaturized })
+    }
+}
+
+extension Notification.Name {
+    /// Phase 122:MainWindowRouter 存好了 pendingRoute,通知已开着的主窗口来取。
+    static let mainWindowRouteReady = Notification.Name("com.bamcope.whereabouts.mainWindowRouteReady")
+}
+
+/// Phase 89:挂在主 ContentView 上。
+/// Phase 122:不再自己监听 .openQuickEntry(主窗口关掉就失灵),改为把本 scene 的
+/// openWindow 交给 MainWindowRouter 兜底;真正的监听在 router 里,跟窗口无关。
 struct QuickEntryHotKeyObserver: ViewModifier {
     @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
         content
-            .onReceive(NotificationCenter.default.publisher(for: .openQuickEntry)) { _ in
-                openWindow(id: "quickEntry")
-                NSApp.activate(ignoringOtherApps: true)
+            .onAppear {
+                MainWindowRouter.shared.register(openWindow, persistent: false)
             }
     }
 }
@@ -251,7 +388,11 @@ struct QuickEntryView: View {
         }
         .padding(20)
         .frame(width: 480)
-        .onAppear { focused = true }
+        .onAppear {
+            focused = true
+            // Phase 122:本 scene 的 openWindow 也交给 router 兜底
+            MainWindowRouter.shared.register(openWindow, persistent: false)
+        }
     }
 
     /// 提交按钮的 enable 条件随 mode 变。
@@ -304,14 +445,14 @@ struct QuickEntryView: View {
         }
     }
 
-    /// Phase 100:搜索模式。把关键词通过 NotificationCenter 广播给 ContentView,
-    /// 后者收到后 set search text + 唤醒主窗口。
+    /// Phase 100:搜索模式。把关键词交给主窗口的搜索框 + 唤醒主窗口。
+    /// Phase 122:改走 MainWindowRouter —— 关键词先存成 pendingRoute 再开 / 唤醒主窗口,
+    /// 之前"先 post 通知再 openWindow",新开的主窗口还没订阅就错过了 query。
     private func runSearch() {
         let q = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return }
-        NotificationCenter.default.post(name: .quickEntrySearch, object: nil, userInfo: ["query": q])
-        openWindow(id: "main")
-        NSApp.activate(ignoringOtherApps: true)
+        MainWindowRouter.shared.register(openWindow, persistent: false)
+        MainWindowRouter.shared.showMain(route: .search(q))
         dismissWindow(id: "quickEntry")
     }
 }
@@ -333,59 +474,87 @@ struct HotKeyCaptureRow: View {
     @AppStorage("globalHotKey.modifiers") private var modifiers: Int = Int(GlobalHotKey.defaultModifiers)
     @State private var capturing = false
     @State private var monitor: Any?
+    /// Phase 122:捕获被拒 / 注册失败时的一行提示(catalog key)。
+    @State private var errorKey: LocalizedStringKey?
 
     var body: some View {
-        HStack {
-            Text("settings.hotkey.keyLabel")
-            Spacer()
-            Button {
-                if capturing {
-                    stopCapture()
-                } else {
-                    startCapture()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("settings.hotkey.keyLabel")
+                Spacer()
+                Button {
+                    if capturing {
+                        stopCapture()
+                    } else {
+                        startCapture()
+                    }
+                } label: {
+                    Text(verbatim: capturing
+                         ? String(localized: "settings.hotkey.capture.prompt")
+                         : HotKeyFormatter.display(keyCode: UInt32(keyCode), modifiers: UInt32(modifiers)))
+                        .font(.body.monospaced())
+                        .frame(minWidth: 100)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(capturing ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10),
+                                    in: .capsule)
                 }
-            } label: {
-                Text(verbatim: capturing
-                     ? String(localized: "settings.hotkey.capture.prompt")
-                     : HotKeyFormatter.display(keyCode: UInt32(keyCode), modifiers: UInt32(modifiers)))
-                    .font(.body.monospaced())
-                    .frame(minWidth: 100)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(capturing ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10),
-                                in: .capsule)
+                .buttonStyle(.plain)
+                Button("settings.hotkey.reset") {
+                    stopCapture()
+                    apply(keyCode: GlobalHotKey.defaultKeyCode, modifiers: GlobalHotKey.defaultModifiers)
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
-            Button("settings.hotkey.reset") {
-                keyCode = Int(GlobalHotKey.defaultKeyCode)
-                modifiers = Int(GlobalHotKey.defaultModifiers)
-                GlobalHotKey.saveCustom(keyCode: GlobalHotKey.defaultKeyCode,
-                                        modifiers: GlobalHotKey.defaultModifiers)
-                GlobalHotKey.shared.registerDefault()
+            if let errorKey {
+                Label(errorKey, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
             }
-            .buttonStyle(.borderless)
-            .controlSize(.small)
-            .foregroundStyle(.secondary)
         }
         .onDisappear { stopCapture() }
     }
 
     private func startCapture() {
         capturing = true
+        errorKey = nil
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Esc → 取消捕获
             if event.keyCode == 53 { stopCapture(); return nil }
-            // 必须带至少一个 modifier — 否则太容易跟普通文本输入冲突。
             let nsMods = event.modifierFlags.intersection([.command, .option, .shift, .control])
-            guard !nsMods.isEmpty else { return nil }
             let carbonMods = HotKeyFormatter.carbonModifiers(from: nsMods)
             let kc = UInt32(event.keyCode)
-            keyCode = Int(kc)
-            modifiers = Int(carbonMods)
-            GlobalHotKey.saveCustom(keyCode: kc, modifiers: carbonMods)
-            GlobalHotKey.shared.registerDefault()
+            // Phase 122:至少要有 ⌘/⌥/⌃(单独 ⇧ 不算),且不能是系统 / 常用编辑快捷键。
+            // 被拒时**留在捕获状态**,用户直接再按一组即可(Esc 退出)。
+            switch GlobalHotKey.check(keyCode: kc, modifiers: carbonMods) {
+            case .needsModifier:
+                errorKey = "settings.hotkey.error.needsModifier"
+                return nil
+            case .reserved:
+                errorKey = "settings.hotkey.error.reserved"
+                return nil
+            case .ok:
+                break
+            }
+            apply(keyCode: kc, modifiers: carbonMods)
             stopCapture()
             return nil
+        }
+    }
+
+    /// Phase 122:先真正注册,成功了才写 UserDefaults / 更新显示;
+    /// 失败时 GlobalHotKey 已自动恢复旧键位,这里保持旧显示 + 提示。
+    private func apply(keyCode kc: UInt32, modifiers mods: UInt32) {
+        let status = GlobalHotKey.shared.register(keyCode: kc, modifiers: mods)
+        if status == noErr {
+            GlobalHotKey.saveCustom(keyCode: kc, modifiers: mods)
+            keyCode = Int(kc)
+            modifiers = Int(mods)
+            errorKey = nil
+        } else {
+            errorKey = "settings.hotkey.error.registerFailed"
         }
     }
 
@@ -472,7 +641,7 @@ struct MenuBarView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     /// 跟主窗口一样过滤掉 soft-deleted。
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var items: [Item]
 
@@ -543,8 +712,9 @@ struct MenuBarView: View {
             // 底部:打开主窗口 + 退出
             HStack {
                 Button {
-                    openWindow(id: "main")
-                    NSApp.activate(ignoringOtherApps: true)
+                    // Phase 122:走 router —— 已有主窗口就唤醒它,不再每点一次新开一个
+                    MainWindowRouter.shared.register(openWindow, persistent: false)
+                    MainWindowRouter.shared.showMain()
                 } label: {
                     Label("menu.openMain", systemImage: "macwindow")
                         .font(.caption)
@@ -569,25 +739,33 @@ struct MenuBarView: View {
         .onAppear {
             // 弹出时自动聚焦输入框,快速键入
             inputFocused = true
+            // Phase 122:本 scene 的 openWindow 也交给 router 兜底
+            MainWindowRouter.shared.register(openWindow, persistent: false)
         }
     }
 
+    /// Phase 122:跟 QuickEntryView.commit 对齐 —— bestMatchOrEnsure 定位置(不再因为
+    /// 写法差一点就建出重复位置)、存 version + rawInput(AI 理解要用原文)、显式 save。
     private func commit() {
         let list = InputParser.parseMultiple(draft)
         guard !list.isEmpty else { return }
+        let raw = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         for parsed in list {
-            let loc = Location.ensure(path: parsed.locationPath, in: modelContext)
+            let loc = Location.bestMatchOrEnsure(path: parsed.locationPath, in: modelContext)
             let item = Item(name: parsed.name, location: loc)
             item.purchaseDate = parsed.purchaseDate
             item.purchaseDatePrecision = parsed.purchaseDatePrecision
             item.purchaseSource = parsed.purchaseSource
             item.model = parsed.model
             item.color = parsed.color
+            item.version = parsed.version
+            item.rawInput = raw
             modelContext.insert(item)
             // 写首条历史 log
             let log = LocationLog(recordedAt: .now, location: loc, item: item)
             modelContext.insert(log)
         }
+        try? modelContext.save()
         draft = ""
         inputFocused = true
     }
@@ -774,10 +952,14 @@ private struct GeneralSettingsTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                // Phase 122:当前 iCloud 账号 + 账号识别码 + 上次收发时间 + 立即同步。
+                ICloudStatusRows()
             } footer: {
                 Group {
                     if !icloudSyncEnabled {
                         Text("settings.icloud.footer.off")
+                    } else if AppContainer.cloudKitActive && CloudSyncMonitor.shared.account == .noAccount {
+                        Text("settings.icloud.footer.noAccount")
                     } else if AppContainer.cloudKitActive {
                         Text("settings.icloud.footer.active")
                     } else {
@@ -956,7 +1138,7 @@ private struct DataSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
 
     /// 用 @Query 取当前所有未删除物品,导出时用。
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var items: [Item]
 
@@ -964,6 +1146,8 @@ private struct DataSettingsTab: View {
     @State private var showingExporter = false
     @State private var exportDocument: WhereaboutsExportDocument?
     @State private var showingClearConfirm = false
+    /// Phase 122:清空失败时的错误描述(显示在清空按钮下方)。
+    @State private var clearError: String?
     /// Phase 90:导入时是否跳过已存在的物品(按 name + path 比对)。默认 ON。
     @AppStorage("importDedupEnabled") private var importDedupEnabled: Bool = true
     /// Phase 90:导入结果摘要,弹完 importer 短暂显示。
@@ -971,10 +1155,9 @@ private struct DataSettingsTab: View {
     // Phase 98:导入 / 导出 前的警示 dialog
     @State private var showingExportConfirm = false
     @State private var showingImportConfirm = false
-    // Phase 117:iCloud 云盘备份状态行(Phase 118 升级为手动同步)
+    // Phase 117:iCloud 云盘备份状态行(Phase 122:只写不读,同步交给 CloudKit)
     @State private var backupBusy = false
     @State private var backupResult: Bool?
-    @State private var syncMerged = 0
 
     var body: some View {
         Form {
@@ -1031,13 +1214,11 @@ private struct DataSettingsTab: View {
                         backupResult = nil
                         let ctx = modelContext
                         Task {
-                            // Phase 118:立即同步 = pull(合并去重)+ push
-                            let r = await CloudBackup.sync(context: ctx)
-                            await MainActor.run {
-                                backupBusy = false
-                                backupResult = r.ok
-                                syncMerged = r.merged
-                            }
+                            // Phase 122:只备份(写本机文件),不再拉别的设备的 JSON 合并 ——
+                            // 那条路会复活已删物品、复制移动过的物品。同步全交给 CloudKit。
+                            let ok = await CloudBackup.backUp(context: ctx)
+                            backupBusy = false
+                            backupResult = ok
                         }
                     } label: {
                         if backupBusy {
@@ -1050,9 +1231,7 @@ private struct DataSettingsTab: View {
                 }
                 if let ok = backupResult {
                     Label {
-                        if ok && syncMerged > 0 {
-                            Text("settings.sync.merged \(syncMerged)")
-                        } else if ok {
+                        if ok {
                             Text("settings.backup.done")
                         } else {
                             Text("settings.backup.failed")
@@ -1075,6 +1254,12 @@ private struct DataSettingsTab: View {
                 } label: {
                     Label("settings.data.clear", systemImage: "trash")
                         .foregroundStyle(.red)
+                }
+                if let clearError {
+                    Label("settings.data.clear.failed \(clearError)",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
             } footer: {
                 Text("settings.data.clear.warning")
@@ -1164,14 +1349,32 @@ private struct DataSettingsTab: View {
         }
     }
 
-    /// SwiftData 17+ 提供 `delete(model:)` 批量清空 entity。
-    /// 顺序:先 Item / LocationLog(有 cascade / inverse 引用) → 再 Location / Tag。
+    /// Phase 122:清空全部数据。
+    /// 原来用 `delete(model:)` 批量删 + `try?`:失败静默;批量删除绕过 context 的逐条变更,
+    /// CloudKit 镜像不一定同步得到;而且漏了 EditLog(孤儿编辑历史一直留在库里)。
+    /// 现在逐类 fetch → 逐个 delete(CloudKit 能把每条删除同步到其它设备)→ `try save()`,
+    /// 失败就回滚并在本页显示错误。顺序:日志 → 物品 → 位置 → 标签。
     private func clearAll() {
-        try? modelContext.delete(model: LocationLog.self)
-        try? modelContext.delete(model: Item.self)
-        try? modelContext.delete(model: Location.self)
-        try? modelContext.delete(model: Tag.self)
-        try? modelContext.save()
+        clearError = nil
+        do {
+            try deleteAll(EditLog.self)
+            try deleteAll(LocationLog.self)
+            try deleteAll(Item.self)
+            try deleteAll(Location.self)
+            try deleteAll(Tag.self)
+            try modelContext.save()
+            // 置顶物品都没了 → 把已排的提醒一并撤掉
+            NotificationScheduler.shared.rescheduleIfEnabled()
+        } catch {
+            modelContext.rollback()
+            clearError = error.localizedDescription
+        }
+    }
+
+    private func deleteAll<T: PersistentModel>(_ type: T.Type) throws {
+        for obj in try modelContext.fetch(FetchDescriptor<T>()) {
+            modelContext.delete(obj)
+        }
     }
 }
 #endif

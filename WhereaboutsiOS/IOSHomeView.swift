@@ -11,7 +11,7 @@ struct IOSHomeView: View {
 
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var rawItems: [Item]
     @Query private var allTags: [Tag]
@@ -168,18 +168,17 @@ struct IOSHomeView: View {
                         }
                         .accessibilityLabel(Text("ios.toolbar.compose"))
                     }
-                    if icloudSyncEnabled {
+                    if icloudSyncEnabled && AppContainer.cloudKitActive {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
                                 guard !syncing else { return }
                                 syncing = true
                                 let ctx = modelContext
                                 Task {
-                                    let r = await CloudBackup.sync(context: ctx)
-                                    await MainActor.run {
-                                        syncing = false
-                                        flashSyncResult(r)
-                                    }
+                                    // Phase 122:落盘 + 等 CloudKit 收发跑完,不再做 JSON 合并。
+                                    let r = await CloudSyncMonitor.shared.syncNow(context: ctx)
+                                    syncing = false
+                                    flashSyncResult(r)
                                 }
                             } label: {
                                 if syncing {
@@ -280,13 +279,22 @@ struct IOSHomeView: View {
             Text("delete.alert.message \(item.name)")
         }
         .task {
+            // Phase 122:本地库没打开(内存兜底)时不播种、不写任何一次性标记 ——
+            // 那是临时库,写进去的东西和标记下次启动都对不上。
+            guard !AppContainer.usingInMemoryFallback else { return }
             seedTagsIfNeeded()
             seedExtendedPresetsIfNeeded()
             cleanDirtyLocations()
             checkAIConnection()
             // Phase 115:全新用户首启 → 灌一批演示物品让首页"有样子",
             // 顶部横幅提供一次性「一键清除」。用户自己录过东西就永不触发。
-            if demoDataState.isEmpty && rawItems.isEmpty {
+            // Phase 122:iCloud 在线时先等第一轮 CloudKit 导入 —— 第二台设备刚装好时本地是空的,
+            // 不等就会把演示物品灌进去,再同步到用户的 Mac 上。
+            // 等完再查一次 —— 用 fetchCount 直接问库,@Query 结果可能还没刷新到刚导入的数据。
+            if demoDataState.isEmpty && rawItems.isEmpty,
+               await Self.cloudLooksEmpty(),
+               demoDataState.isEmpty,
+               ((try? modelContext.fetchCount(FetchDescriptor<Item>())) ?? 1) == 0 {
                 seedDemoData()
                 demoDataState = "active"
             }
@@ -302,11 +310,21 @@ struct IOSHomeView: View {
             #endif
         }
         // 点通知 banner → 清筛选 + 名字进搜索框,列表直达该物品。
-        .onReceive(NotificationCenter.default.publisher(for: .openItemByName)) { note in
-            guard let name = note.userInfo?["itemName"] as? String else { return }
-            filter.clearAll()
-            filter.search = name
+        // Phase 122:不再直接 onReceive —— 冷启动时广播可能早于本视图订阅。改由
+        // IOSRootView.PendingItemOpen 先接住存下,这里首次出现 / 名字变化时取走应用。
+        .onChange(of: IOSRootView.PendingItemOpen.shared.name, initial: true) { _, _ in
+            applyPendingItemOpen()
         }
+        .onAppear(perform: applyPendingItemOpen)
+    }
+
+    /// Phase 122:取走通知点击留下的物品名,放进搜索框(取走即清空,避免重复应用)。
+    private func applyPendingItemOpen() {
+        let pending = IOSRootView.PendingItemOpen.shared
+        guard let name = pending.name else { return }
+        pending.name = nil
+        filter.clearAll()
+        filter.search = name
     }
 
     // MARK: - 列表
@@ -386,8 +404,8 @@ struct IOSHomeView: View {
         .scrollContentBackground(.hidden)
         // Phase 118:下拉刷新 = 从 iCloud 手动同步(开关关着就只是转一下)
         .refreshable {
-            guard icloudSyncEnabled else { return }
-            let r = await CloudBackup.sync(context: modelContext)
+            guard icloudSyncEnabled && AppContainer.cloudKitActive else { return }
+            let r = await CloudSyncMonitor.shared.syncNow(context: modelContext)
             flashSyncResult(r)
         }
     }
@@ -403,30 +421,37 @@ struct IOSHomeView: View {
     @ViewBuilder
     private var batchMenu: some View {
         let count = multiSelection.count
-        Section("bulk.delete.label \(count)") {
+        // Phase 122:分组标题原来误用 "删除 (N)",改成"批量编辑";
+        // 0 选中时整组禁用(0 件"设位置"会凭空建出一个没人用的孤儿位置)。
+        Section("batch.menu.title") {
             Button {
                 batchEdit = .tags(items: selectedItemsSnapshot())
             } label: {
                 Label("batch.menu.setTags", systemImage: "tag")
             }
+            .disabled(count == 0)
             Button {
                 batchEdit = .location(items: selectedItemsSnapshot())
             } label: {
                 Label("batch.menu.setLocation", systemImage: "mappin.and.ellipse")
             }
+            .disabled(count == 0)
             Button {
                 batchEdit = .source(items: selectedItemsSnapshot())
             } label: {
                 Label("batch.menu.setSource", systemImage: "bag")
             }
+            .disabled(count == 0)
         }
         Section {
             Button(action: batchMarkSeen) {
                 Label("batch.menu.markSeen", systemImage: "checkmark.circle")
             }
+            .disabled(count == 0)
             Button(action: batchMarkLost) {
                 Label("batch.menu.markLost", systemImage: "questionmark.circle")
             }
+            .disabled(count == 0)
         }
         Section {
             Button {
@@ -519,15 +544,17 @@ struct IOSHomeView: View {
     }
 
     /// Phase 118:同步结果 toast。合并了 N 条 → 显示条数;0 条 → "同步完成";失败 → 提示。
-    private func flashSyncResult(_ r: (ok: Bool, merged: Int)) {
-        if r.ok || r.merged > 0 { Haptics.success() } else { Haptics.warning() }
+    private func flashSyncResult(_ r: CloudSyncMonitor.SyncOutcome) {
+        if case .cloudKitIdle = r { Haptics.success() } else { Haptics.warning() }
         withAnimation(.snappy) {
-            if r.merged > 0 {
-                syncToast = String(localized: "settings.sync.merged \(r.merged)")
-            } else if r.ok {
-                syncToast = String(localized: "settings.backup.done")
-            } else {
-                syncToast = String(localized: "settings.backup.failed")
+            switch r {
+            case .cloudKitIdle:
+                syncToast = String(localized: "settings.icloud.syncDone")
+            case .accountUnavailable:
+                syncToast = String(localized: "settings.icloud.syncNoAccount")
+            case .failed:
+                syncToast = CloudSyncMonitor.shared.lastError
+                    ?? String(localized: "settings.icloud.syncFailed")
             }
         }
         Task {
@@ -1022,19 +1049,63 @@ struct IOSHomeView: View {
         .iosCard(padding: 14, cornerRadius: 18)
     }
 
+    /// Phase 122:演示数据用到的全部位置路径(含各级父路径)。一键清除只删这些位置,
+    /// 绝不碰用户自己建的空位置(原来是全库扫空位置,会误删用户的、以及
+    /// 物品还没从 iCloud 同步下来的位置,删除再同步到所有设备)。
+    private static let demoLocationPaths: Set<String> = {
+        let paths: [[String]] = [
+            ["卧室", "五斗柜", "第二格抽屉"], ["书房", "保险箱"], ["客厅", "电视柜"],
+            ["书房", "桌面"], ["玄关", "钥匙盒"], ["卫生间", "镜柜"], ["储物间", "顶层架子"],
+        ]
+        var out: Set<String> = []
+        for p in paths {
+            for n in 1...p.count { out.insert(p.prefix(n).joined(separator: " > ")) }
+        }
+        return out
+    }()
+
+    /// Phase 122:iCloud 里是不是真的没有数据(决定要不要灌演示物品)。
+    /// 本机模式 / 没登录 iCloud → 是;已登录 → 等第一轮导入跑完(最多 25 秒)再说,
+    /// 等不到就保守地不灌。
+    @MainActor
+    private static func cloudLooksEmpty() async -> Bool {
+        guard !AppContainer.usingInMemoryFallback else { return false }
+        guard AppContainer.cloudKitActive else { return true }
+        let monitor = CloudSyncMonitor.shared
+        await monitor.refreshAccount()
+        switch monitor.account {
+        case .noAccount: return true
+        case .available: break
+        default: return false
+        }
+        if monitor.lastImportAt != nil { return true }   // 之前已完整导入过一轮,确实是空的
+        let startGen = monitor.importGeneration
+        let deadline = Date().addingTimeInterval(25)
+        while monitor.importGeneration == startGen && Date() < deadline {
+            if Task.isCancelled { return false }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return monitor.importGeneration > startGen
+    }
+
     /// 一键清除:硬删带 demoMarker 的物品(cascade 连历史一起),
-    /// 再清掉因此变空的位置节点(自底向上,不碰有用户物品/子节点的)。
+    /// 再清掉因此变空的**演示**位置节点(自底向上,不碰有用户物品/子节点的)。
     private func clearDemoData() {
         let demoItems = rawItems.filter { $0.rawInput == Self.demoMarker }
         for item in demoItems {
             modelContext.delete(item)
         }
+        // 先落盘:删除要经 save 才会把关系另一端(loc.items / parent.children)清掉,
+        // 否则下面的"空位置"判断看到的还是删之前的状态,父级永远清不掉。
+        try? modelContext.save()
         // 清空位置:反复扫直到没有可删的(叶子先掉,父级随后变空)
         var removed = true
         while removed {
+            try? modelContext.save()
             removed = false
             let locs = (try? modelContext.fetch(FetchDescriptor<Location>())) ?? []
-            for loc in locs where loc.items.isEmpty && loc.children.isEmpty {
+            for loc in locs where loc.items.isEmpty && loc.children.isEmpty
+                && Self.demoLocationPaths.contains(loc.path) {
                 modelContext.delete(loc)
                 removed = true
             }
@@ -1077,6 +1148,11 @@ struct IOSHomeView: View {
 
     /// 位置脏数据清理:先拆 name 含分隔符的,再合并同名根(幂等,每次启动跑)。
     private func cleanDirtyLocations() {
+        // Phase 122:标签去重安全(删 tag 只断挂载);位置树在 CloudKit 在线时不自动动 ——
+        // 合并会 cascade 删掉另一台设备还没同步过来的子位置。理由详见 macOS ContentView。
+        Item.reconcileTrashState(in: modelContext)   // 回收站状态改以 deletedAt 为准
+        Tag.mergeDuplicates(in: modelContext)
+        guard !AppContainer.cloudKitActive else { return }
         _ = Location.splitMalformedNames(in: modelContext)
         _ = Location.mergeDuplicateRoots(in: modelContext)
     }
@@ -1150,24 +1226,34 @@ final class IOSAIRunner {
         let tagNames = allTags.map(\.name)
         let locPaths = Self.locationsSortedByRecency(items: allItems)
 
-        Task {
+        // Phase 122:读 item / 拍快照 / 写回都在 MainActor(本类 @MainActor,Task 继承);
+        // 只有 client.understand 的网络部分离开主线程,且只拿 Sendable 快照。
+        Task { @MainActor in
             for item in targets {
                 let id = item.persistentModelID
+                // 排队期间可能已被删 —— 不在了直接跳过,别去读已删对象。
+                guard aiTargetStillExists(item, in: context) else {
+                    self.processing.remove(id)
+                    continue
+                }
+                let request = AIItemSnapshot(item: item, availableTags: tagNames, availableLocations: locPaths)
                 do {
-                    let result = try await client.understand(
-                        item: item, availableTags: tagNames, availableLocations: locPaths)
-                    await MainActor.run {
-                        applyAIResult(result, to: item, in: context)
+                    let result = try await client.understand(request)
+                    // await 期间可能被彻底删除 / 被 CloudKit 合并删掉 → 丢弃结果。
+                    guard aiTargetStillExists(item, in: context) else {
                         self.processing.remove(id)
-                        self.completed.insert(id)
+                        continue
                     }
+                    applyAIResult(result, to: item, in: context)
+                    self.processing.remove(id)
+                    self.completed.insert(id)
                     Task {
                         // Phase 120:10 秒窗口 —— 给用户看清 ✓ 并有时间点「一键还原」
                         try? await Task.sleep(for: .seconds(10))
                         await MainActor.run { _ = self.completed.remove(id) }
                     }
                 } catch {
-                    print("AI understand failed for \(item.name): \(error)")
+                    print("AI understand failed for \(request.name): \(error)")
                     await MainActor.run { _ = self.processing.remove(id) }
                 }
             }
@@ -1264,7 +1350,7 @@ struct IOSTrashView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<Item> { $0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt != nil },
            sort: \Item.updatedAt, order: .reverse)
     private var deletedItems: [Item]
 

@@ -12,7 +12,7 @@ struct IOSRecordView: View {
 
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var items: [Item]
     @Query private var allTags: [Tag]
@@ -28,6 +28,18 @@ struct IOSRecordView: View {
     @State private var pendingDuplicate: PendingDuplicate?
     @State private var pendingUpdate: PendingUpdate?
     @State private var pendingAmbiguousLocation: PendingAmbiguousLocation?
+    /// Phase 122:同名叶子待消歧的条目排队,一次弹一个 —— 以前多条录入时每条都覆盖
+    /// pendingAmbiguousLocation,只剩最后一条,toast 却报"已录入 N 件"。
+    @State private var ambiguousQueue: [PendingAmbiguousLocation] = []
+    /// Phase 122:本轮提交实际入库的件数(消歧时点了取消的不算)。
+    @State private var savedThisCommit = 0
+    /// Phase 122:本轮是否多条录入 —— 多条留在本页连续录,单条完成后切回列表。
+    @State private var commitIsBatch = false
+    /// Phase 122:当前弹出的消歧条目 + 它是否已选定;sheet 关掉时没选定 = 用户取消了这条。
+    @State private var presentedAmbiguous: PendingAmbiguousLocation?
+    @State private var presentedResolved = false
+    /// Phase 122:本轮里因取消消歧而没存的条目 —— 收尾时放回输入框(与 macOS 一致),不悄悄丢掉。
+    @State private var cancelledThisCommit: [InputParser.Parsed] = []
     @State private var aiRunner = IOSAIRunner()
 
     /// 成功 toast(短暂显示后消失)。
@@ -38,6 +50,10 @@ struct IOSRecordView: View {
     /// Phase 117:语音输入。识别文本实时追加到 draft(以按下时的内容为基底)。
     @State private var speech = SpeechInput()
     @State private var speechBase = ""
+    /// Phase 122:本页发起的一次听写进行中(含停止后等最终结果的那一小段)。
+    /// 识别文本只在它为 true 时写回草稿;提交 / 离开页面 / 退后台时置 false。
+    @State private var dictating = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -61,10 +77,16 @@ struct IOSRecordView: View {
         .sheet(isPresented: $showingAISettings) {
             NavigationStack { IOSAISettingsView() }
         }
-        .sheet(item: $pendingAmbiguousLocation) { ctx in
+        // Phase 122:选完 / 取消都会 dismiss → onDismiss 统一推进队列(弹下一个或收尾)。
+        .sheet(item: $pendingAmbiguousLocation, onDismiss: continueOrFinishCommit) { ctx in
             AmbiguousLocationPicker(context: ctx) { choice in
                 resolveAmbiguousLocation(ctx, choice: choice)
             }
+        }
+        // Phase 122:离开本页 / 退到后台 → 停掉语音识别,别让它在后台继续往草稿里写。
+        .onDisappear { stopDictation() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { stopDictation() }
         }
         .alert("dup.alert.title",
                isPresented: .init(get: { pendingDuplicate != nil },
@@ -155,7 +177,10 @@ struct IOSRecordView: View {
             HStack(spacing: 10) {
                 Button {
                     Haptics.tap()
-                    if !speech.isRecording { speechBase = draft }
+                    if !speech.isRecording {
+                        speechBase = draft
+                        dictating = true
+                    }
                     speech.toggle()
                 } label: {
                     Image(systemName: speech.isRecording ? "stop.fill" : "mic.fill")
@@ -197,13 +222,20 @@ struct IOSRecordView: View {
                 .disabled(!canSubmit)
             }
             .onChange(of: speech.transcript) { _, new in
-                guard speech.isRecording else { return }
+                // Phase 122:看 dictating 而不是 isRecording —— 识别器的最终结果到达时
+                // isRecording 已经是 false,旧写法会把最后一段丢掉。
+                guard dictating else { return }
                 // 识别结果实时接到按下录音时的草稿后面
                 let sep = speechBase.isEmpty || speechBase.hasSuffix("\n") ? "" : " "
                 draft = speechBase + (new.isEmpty ? "" : sep + new)
             }
             if speech.permissionDenied {
                 Label("record.voice.denied", systemImage: "mic.slash")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            } else if speech.unavailable {
+                // Phase 122:识别服务 / 麦克风不可用(不是权限问题)单独提示。
+                Label("record.voice.unavailable", systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
@@ -407,6 +439,8 @@ struct IOSRecordView: View {
     // MARK: - 提交(对齐 macOS ContentView.commit)
 
     private func commit() {
+        // Phase 122:提交时先停听写,否则识别回调会把刚提交的文字又写回草稿。
+        stopDictation()
         let list = InputParser.parseMultiple(draft)
         guard !list.isEmpty else { return }
         let rawForBatch = draft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -430,30 +464,89 @@ struct IOSRecordView: View {
                 )
                 return
             }
+            beginCommitRound(batch: false)
             addNewItem(parsed, rawInput: rawForBatch)
-            finishCommit(count: 1)
+            continueOrFinishCommit()
             return
         }
         // 多条:批量入库,跳过重复检测
+        beginCommitRound(batch: true)
         for parsed in list {
             addNewItem(parsed, rawInput: rawForBatch)
         }
-        finishCommit(count: list.count)
+        continueOrFinishCommit()
+    }
+
+    /// Phase 122:停听写并清基底(提交 / 离开页面 / 退后台)。
+    private func stopDictation() {
+        dictating = false
+        speechBase = ""
+        speech.cancel()
+    }
+
+    /// Phase 122:开始一轮"入库 + 可能的逐条消歧"。
+    private func beginCommitRound(batch: Bool) {
+        savedThisCommit = 0
+        ambiguousQueue = []
+        commitIsBatch = batch
+        presentedAmbiguous = nil
+        presentedResolved = false
+        cancelledThisCommit = []
+    }
+
+    /// Phase 122:一轮提交的推进 —— 还有待消歧的就弹下一个;队列空了才 toast / 清草稿 / 切 tab。
+    /// 一件都没存(全部取消)→ 草稿保留,方便改了再提交。
+    private func continueOrFinishCommit() {
+        guard pendingAmbiguousLocation == nil else { return }
+        // 刚关掉的消歧 sheet 没选定 → 这条被取消了,记下来收尾时放回输入框。
+        if let shown = presentedAmbiguous {
+            if !presentedResolved { cancelledThisCommit.append(shown.parsed) }
+            presentedAmbiguous = nil
+            presentedResolved = false
+        }
+        if !ambiguousQueue.isEmpty {
+            let next = ambiguousQueue.removeFirst()
+            presentedAmbiguous = next
+            presentedResolved = false
+            pendingAmbiguousLocation = next
+            return
+        }
+        let saved = savedThisCommit
+        let cancelled = cancelledThisCommit
+        savedThisCommit = 0
+        cancelledThisCommit = []
+        guard saved > 0 else { return }   // 一件都没存:草稿原样保留
+        if cancelled.isEmpty {
+            draft = ""
+        } else {
+            // 只把取消的那几条放回去("名字 在 a > b",多条用全角逗号),避免再次提交时重复录入已存的。
+            draft = cancelled.map { p in
+                p.locationPath.isEmpty ? p.name : "\(p.name) 在 \(p.locationPath.joined(separator: " > "))"
+            }.joined(separator: "\u{FF0C}")
+        }
+        finishCommit(count: saved, stayHere: commitIsBatch || !cancelled.isEmpty,
+                     restored: cancelled.count)
     }
 
     /// 成功反馈:haptic + toast;单条录入切回列表 tab,多条留在本页连续录。
-    private func finishCommit(count: Int) {
+    /// Phase 122:stayHere 显式传(多条录入哪怕只存下 1 件也留在本页)。
+    private func finishCommit(count: Int, stayHere: Bool? = nil, restored: Int = 0) {
+        let stay = stayHere ?? (count > 1)
         Haptics.success()
         withAnimation(.snappy) {
-            savedAck = count > 1
+            var ack = count > 1
                 ? String(localized: "quickEntry.ack.batch \(count)")
                 : String(localized: "ios.record.ack")
+            if restored > 0 {
+                ack += " · " + String(localized: "ambiguousLocation.cancel.restored \(restored)")
+            }
+            savedAck = ack
         }
         Task {
             try? await Task.sleep(for: .seconds(1.6))
             await MainActor.run {
                 withAnimation { savedAck = nil }
-                if count == 1 { onSaved() }
+                if !stay { onSaved() }
             }
         }
     }
@@ -473,8 +566,9 @@ struct IOSRecordView: View {
     private func addNewItem(_ parsed: InputParser.Parsed, rawInput: String? = nil) {
         switch Location.resolve(path: parsed.locationPath, in: modelContext) {
         case .ambiguous(let candidates, let leaf):
-            pendingAmbiguousLocation = PendingAmbiguousLocation(
-                parsed: parsed, candidates: candidates, originalLeaf: leaf, rawInput: rawInput)
+            // Phase 122:排队,由 continueOrFinishCommit 一次弹一个。
+            ambiguousQueue.append(PendingAmbiguousLocation(
+                parsed: parsed, candidates: candidates, originalLeaf: leaf, rawInput: rawInput))
         case .useExisting(let loc):
             finalizeNewItem(parsed, location: loc, rawInput: rawInput)
         case .create(let path):
@@ -490,8 +584,9 @@ struct IOSRecordView: View {
         case .newTopLevel:          loc = Location.ensure(path: ctx.parsed.locationPath, in: modelContext)
         }
         finalizeNewItem(ctx.parsed, location: loc, rawInput: ctx.rawInput)
+        presentedResolved = true
+        // Phase 122:不在这里收尾 —— 选择器 dismiss 后 sheet 的 onDismiss 推进队列。
         pendingAmbiguousLocation = nil
-        finishCommit(count: 1)
     }
 
     private func finalizeNewItem(_ parsed: InputParser.Parsed, location loc: Location?, rawInput: String? = nil) {
@@ -511,7 +606,8 @@ struct IOSRecordView: View {
         if useAIOnInput && AISettings.hasActiveKey {
             aiRunner.understand(items: [item], allTags: allTags, allItems: items, context: modelContext)
         }
-        draft = ""
+        // Phase 122:草稿不在每件入库时清 —— 等整轮(含逐条消歧)结束再清,见 continueOrFinishCommit。
+        savedThisCommit += 1
     }
 
     /// 静默自动挂 tag(iOS 不做撤销 toast,编辑页可手动摘)。
@@ -550,6 +646,7 @@ struct IOSRecordView: View {
 
     private func createFromRawDraft() {
         let list = InputParser.parseMultiple(draft)
+        beginCommitRound(batch: list.count > 1)
         if list.isEmpty {
             let raw = draft.trimmingCharacters(in: .whitespacesAndNewlines)
             if !raw.isEmpty {
@@ -559,7 +656,7 @@ struct IOSRecordView: View {
             for p in list { addNewItem(p) }
         }
         pendingUpdate = nil
-        finishCommit(count: max(1, list.count))
+        continueOrFinishCommit()
     }
 
     private func resolveDuplicate(_ dup: PendingDuplicate, asUpdate: Bool) {
@@ -582,16 +679,20 @@ struct IOSRecordView: View {
             if dup.existing.model          == nil { dup.existing.model          = dup.newModel }
             if dup.existing.color          == nil { dup.existing.color          = dup.newColor }
             if dup.existing.version        == nil { dup.existing.version        = dup.newVersion }
+            draft = ""
+            pendingDuplicate = nil
+            finishCommit(count: 1)
         } else {
+            // Phase 122:"新建一条"可能撞上同名叶子 → 走同一套消歧队列,选完才收尾。
+            beginCommitRound(batch: false)
             addNewItem(InputParser.Parsed(
                 name: dup.newName, locationPath: dup.newPath,
                 purchaseDate: dup.newDate, purchaseDatePrecision: dup.newDatePrecision,
                 purchaseSource: dup.newSource, model: dup.newModel,
                 color: dup.newColor, version: dup.newVersion
             ))
+            pendingDuplicate = nil
+            continueOrFinishCommit()
         }
-        draft = ""
-        pendingDuplicate = nil
-        finishCommit(count: 1)
     }
 }

@@ -49,6 +49,18 @@ Location autocomplete:
   · Matching is case-insensitive and ignores full/half-width
     differences: "hifi" matches "HiFi"
 
+When a location is ambiguous:
+  If the location you typed is a single segment (such as "top
+  drawer") and several locations with that name already exist, a
+  "Pick a location" prompt lists their full paths. Choose an
+  existing one, or create a new top-level location.
+  When several items in one entry are ambiguous, you're asked about
+  each in turn and every item can be saved. If you cancel them all,
+  your text stays in the input box.
+  (macOS) Items that share the same location wording are asked
+  about only once. If you cancel just some, the unsaved ones go
+  back into the input box with a note.
+
 If no AI key is configured, a purple chip below the input
 prompts you to set one up. Clicking opens Settings → AI.
 
@@ -65,7 +77,9 @@ Configure AI (⌘, → AI tab):
     and switched on demand
   · Model: Haiku 4.5 / Sonnet 4.6 / Sonnet 5 / Opus 4.7 / Opus 4.8
            (Claude) or a Volcengine model name / endpoint ID
-  · API key: entered here, stored in app preferences
+  · API key: entered here. It's stored in this device's system
+    Keychain and used only to call the AI provider you chose —
+    never synced or uploaded, and the developer can't see it.
   · Endpoint: defaults to the official URL; change it to a
     relay or proxy if direct access isn't available
   · "Test connection" verifies the key in about 1 second
@@ -74,10 +88,6 @@ Configure AI (⌘, → AI tab):
     Volcengine account, getting an API key, entering it in the
     app, estimating cost, and troubleshooting errors. Bilingual
     (中/EN), available on both Mac and iOS.
-
-> ✅ v0.2.0: Two new Claude model tiers — Sonnet 5 and Opus 4.8.
-> The AI settings section also gained a "View illustrated setup
-> guide (web)" link.
 
 Three ways to trigger AI re-understanding:
   1. Check "Use AI to re-understand" in the input area
@@ -107,6 +117,9 @@ What AI does:
     invents new tags. If nothing fits, it falls back to "Other"
   · AI's tag replaces all current tags on the item (no stacking)
   · Fields AI returns as null keep their existing values
+  · Purchase dates keep the precision you gave: "bought in 2024"
+    records just the year, and if you name a month it records the
+    month — AI never makes up a month or day
 
 AI location typo tolerance:
   AI receives your full list of existing locations and will
@@ -120,6 +133,8 @@ Reverting an AI change:
   In the detail-page timeline, rows where AI modified the name
   have an ↩ Revert button on the right. Click it to restore
   the name to what it was before AI changed it.
+  On iPhone, right after AI renames an item, its list row also
+  shows a small "Undo" button for about 10 seconds.
 
 AI usage statistics (Settings → AI):
   The usage section at the top shows three columns: Today /
@@ -142,6 +157,9 @@ Privacy:
   Requests are only sent when you click ✨ — the main entry
   flow is 100% local. Photos and history logs are never sent;
   only the item's current text fields are included.
+  Your API key stays in this device's Keychain. It is not synced
+  through iCloud and never appears in exported JSON files or
+  iCloud Drive backups.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -207,6 +225,23 @@ Four sections:
   · Photo         Photos library or Finder file
   · Tags          Multi-select + custom color
 
+Tag rows:
+  · Right-click (iPhone: long-press or swipe left) a tag that's on
+    the item → "Remove from This Item". This only takes the tag off
+    this item — the tag itself stays.
+  · To delete a tag everywhere, use Settings → Tags
+    (iPhone: Settings → General → Manage Tags).
+
+Done and Cancel:
+  · Done    Saves your edits.
+  · Cancel  Discards this session's edits: fields (name, notes and
+            so on), the photo and tags all go back to how they were
+            when you opened the form, and tags created here but
+            left unused are removed. On Mac, Esc does the same.
+  · Related items apply immediately, so Cancel doesn't undo them.
+  · iPhone: while the form has unsaved changes it can't be swiped
+    down — tap Cancel to discard or Done to save.
+
 Related items:
   · Add or manage associations at the bottom of the edit form
     (also available via right-click → "Link to…")
@@ -255,8 +290,17 @@ Managing tags (Settings → Tags tab):
   delete button. Click any color swatch to switch color
   instantly; the selected one has a stroke and a check mark.
 
-Deleting a tag: use the Tags tab or right-click a tag row.
-  Deletion only unlinks the tag — items are not affected.
+Deleting a tag: Settings → Tags tab, click the trash button on the
+  tag's row (iPhone: Settings → General → Manage Tags).
+  Deletion only unlinks the tag — items are not affected. With
+  iCloud Sync on, the tag also disappears from your other devices.
+  The edit form can only take a tag off the current item; it never
+  deletes the tag itself.
+
+Duplicate tags:
+  With iCloud Sync on, if two devices each created a tag with the
+  same name (the presets, for example), they're merged into one
+  automatically and every item keeps its tag.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -322,6 +366,12 @@ Automatic data maintenance:
     (e.g. two separate "Study" entries)
   When cleanup runs, a toast at the bottom reports how many
   records were affected. Clean libraries see no toast at all.
+  With iCloud Sync on, neither cleanup runs automatically —
+  merging locations could delete sub-locations that haven't
+  synced from your other device yet. If you see duplicate
+  locations, merge them by hand with "Merge into…" in
+  Settings → Locations
+  (iPhone: Settings → General → Manage Locations).
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -332,6 +382,9 @@ macOS list selection:
   · Click           Select one; inspector opens on the right
   · ⌘ + click       Add/remove from selection
   · ⇧ + click       Range select
+
+iPhone: tap "Select" at the top left of the Items tab to
+multi-select; the batch menu is described under "iOS Version".
 
 With 2+ items selected (right-click or toolbar "Batch Edit"):
   · Add / remove tags (tri-state: ✓ all / — mixed / ○ none;
@@ -372,15 +425,31 @@ Quick right-click actions on a single item (no edit form needed):
   🗄  Trash
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Open via the Trash icon in the top-right toolbar.
+Mac: open via the Trash icon in the top-right toolbar.
+iPhone: on the Items tab, tap ⋯ at the top right → Trash.
 
 Deleted items live here — hidden from the main list,
 search, and stats.
 
-Right-click → Restore (back to main list) or Delete permanently.
-Toolbar → Empty Trash (permanent, confirmation required).
+Mac: right-click → Restore (back to main list) or Delete
+permanently; toolbar → Empty Trash.
+iPhone: swipe right to restore, swipe left to delete permanently;
+the trash icon at the top right → Empty Trash.
+Emptying the Trash is permanent and needs confirmation.
 
 Items in Trash never expire. They stay until you purge them.
+
+With iCloud Sync on, the Trash syncs too:
+  · Move an item to the Trash on one device and it goes to the
+    Trash on your other devices as well, disappearing from their
+    main lists.
+  · Items trashed on another device show up in this device's Trash.
+  · Restoring or deleting permanently syncs to your other devices
+    too.
+
+Note: after updating, items that were deleted on another device
+but still showed here are moved to the Trash. Restore any you
+want to keep.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -394,6 +463,11 @@ Skips duplicate detection and update-intent dialogs
 (fire-and-forget). Shows the 5 most recent items.
 "Open window" brings the main view forward.
 
+With the main window closed, the menu bar icon, the global
+shortcut (⌥⌘N) and clicking a reminder keep working. "Open window"
+brings the existing main window forward instead of opening
+another one.
+
 To hide the icon: ⌘, → General → Menu Bar → turn off.
 
 
@@ -404,19 +478,48 @@ To hide the icon: ⌘, → General → Menu Bar → turn off.
 Requires iOS 17 or later.
 
 Three tabs:
-  · Items    List + search + room filter chips + stat tiles
+  · Items    List + search + stat tiles (the tiles double as
+             filters — see below)
   · Record   Natural-language entry — same parsing rules,
              duplicate detection, and disambiguation prompts
-             as the Mac version
-  · Settings General / Input Behavior / Notifications / AI /
-             Data / About
+             as the Mac version. A microphone button sits to the
+             left of "Save it": tap it to dictate — the recognized
+             text is added to the input box — and tap again to
+             stop. The first time, allow microphone and speech
+             recognition access; if recognition is temporarily
+             unavailable (for example, offline), you'll see a note
+  · Settings AI / General / Input Behavior / Notifications /
+             iCloud Sync / Data / About
              Each option matches its Mac counterpart (see the
              sections above); they're just regrouped for a
-             phone-sized screen
+             phone-sized screen. Manage Tags and Manage Locations
+             live under General
+
+Stat tiles (top of the Items tab) double as filters:
+  · Items    Tap to clear all filters
+  · Rooms, Source, Brand, Year
+             Tap to open a menu and pick one; pick the same one
+             again to clear it
+  · Pinned, Lent
+             Tap to show only pinned / lent items; tap again to
+             clear
+  A selected tile gets an outline and shows the chosen value.
+  Source, Brand and Year only appear when you have data for them.
+
+Toolbar on the Items tab:
+  · Select    Enter multi-select. Tick items, then tap ⋯ at the top
+              right for the "Batch Edit" menu: Add Tags / Set
+              Location / Set Source / Mark All as Just Seen /
+              Mark All as Can't Find / Re-understand with AI /
+              Delete. Multi-select ends when the action finishes
+  · New note  Jump straight to the Record tab
+  · ☁️        Sync with iCloud now (shown only while iCloud Sync
+              is on)
+  · ⋯         Sort options and the Trash
 
 List gestures:
-  · Swipe left      Pin
-  · Swipe right     Delete or Edit
+  · Swipe right     Pin
+  · Swipe left      Delete or Edit
   · Long-press      Opens a menu: Pin / Edit / Lend to… /
                      Mark as returned / ✨ Re-understand with AI /
                      Delete
@@ -434,12 +537,94 @@ Detail page:
     straight to that item's detail
   · Photos support full-screen viewing with pinch-to-zoom
 
-Data storage:
-  The iOS and Mac versions each keep their own data locally —
-  there is no automatic sync between them. To move data between
-  devices, use the JSON export / import under Settings → Data:
-  export on one device, transfer the file, then import on the
-  other (see the next section).
+Data sync:
+  iPhone / iPad and Mac sync automatically through your own
+  iCloud, so there's no need to move data by hand. See "iCloud
+  Sync" next.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ☁️  iCloud Sync
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sign in to the same Apple Account on your Mac and your
+iPhone / iPad, and your data syncs automatically through your
+own iCloud. No sign-up, no third-party server — and the
+developer can never see your content.
+
+What syncs:
+  Items (with photos), locations, tags, history, and loan /
+  pin / related-item status.
+
+Getting started:
+  1. Sign in to the same Apple Account on both devices in
+     system Settings
+  2. Make sure the "iCloud Sync" switch is on (it is by default)
+     Mac: Settings → General; iPhone: Settings → iCloud Sync
+  3. Add, edit or delete on either device — changes usually show
+     up on the other within seconds to a minute or two
+
+When you switch back to the app, it also pulls the latest
+changes from your other device.
+
+The badge next to the switch shows the current state:
+  · On          iCloud is connected for this launch
+  · Local only  iCloud isn't in use this launch (the switch is
+                off, or sync couldn't start); your data is still
+                saved on this device. If sync couldn't start,
+                reopening the app tries again
+Changing the switch takes effect the next time you open the app.
+With sync off, data stays on this device only — you can still
+move it between devices with JSON export / import.
+
+Checking sync status:
+  Mac:    Settings → General → iCloud Sync
+  iPhone: Settings → iCloud Sync
+  · iCloud Account  Signed in (your name shows when available) /
+                    Not signed in to iCloud / Restricted (Screen
+                    Time or device management) / Temporarily
+                    unavailable
+  · Account ID      Apple doesn't let apps read your Apple ID
+                    email, so a short code is shown instead. If
+                    the code matches on two devices, they're on
+                    the same iCloud account.
+  · Last received   When changes last arrived from iCloud
+  · Last sent       When changes were last sent to iCloud
+  · Sync errors     When something goes wrong, one plain sentence
+                    says why — e.g. "iCloud storage is full — new
+                    changes can't be uploaded". Self-recovering
+                    hiccups such as a brief network drop stay quiet.
+  · Sync Now        Saves your pending changes, waits for the
+                    current upload and download round to finish,
+                    then reports the result: "Synced with iCloud" /
+                    "Not signed in to iCloud — can't sync" /
+                    "Sync hit an error — it will retry automatically"
+  Last received / sent, errors and Sync Now appear only while sync
+  is active.
+
+Sync Now on iPhone:
+  Pull down to refresh on the Items tab, or tap the ☁️ button at
+  the top right — both work the same as Sync Now in Settings. The
+  ☁️ button only appears while iCloud Sync is on.
+
+If you're not signed in to iCloud:
+  Settings explains that this device isn't signed in, so your data
+  is only on this device for now. Sign in to your Apple Account in
+  system Settings (the same one as your other device) and syncing
+  starts automatically.
+
+What doesn't sync:
+  · Your AI API key lives only in this device's Keychain
+  · Settings are per device too — on a new device, set up AI again
+  · iCloud Drive backup files don't take part in syncing (see
+    "Export & Import")
+
+If something goes wrong:
+  · If Settings says "The local database couldn't be opened this
+    time… changes won't be saved", or the app shows "Your data
+    can't be opened right now": your data file is still there —
+    nothing is lost. Quit the app completely and open it again;
+    if it keeps happening, contact the author (see "About").
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -453,7 +638,7 @@ Export: top-right ⬆ button
   Confirm to choose a save path and generate the JSON file.
   Note: API keys and other sensitive data are never included.
 
-Import: ⌘, → Data tab → Import from JSON…
+Import: ⌘, → Data tab → Bulk import from JSON… (iPhone: Settings → Data)
   A confirmation dialog explains that items will be appended
   to your existing library.
   "Skip duplicate items on import" toggle (on by default):
@@ -461,9 +646,35 @@ Import: ⌘, → Data tab → Import from JSON…
     · Off: All items are imported, including duplicates —
            turn this off with care, as duplicate items are
            difficult to bulk-delete after the fact.
+  With iCloud Sync on, imported items sync to your other devices too.
 
-Clear all: ⌘, → Data tab → Clear all data
+iCloud Drive Backup: ⌘, → Data tab → iCloud Drive Backup
+                     (iPhone: Settings → Data)
+  Tap "Back Up Now" to save all your items as one JSON file in
+  iCloud Drive › Whereabouts (visible in Finder on Mac and in the
+  Files app on iPhone).
+  · Each device writes its own file; the file name includes the
+    device type and a short device code, e.g.
+    whereabouts-backup-iPhone-3F2A.json
+  · Backups also run automatically: when you quit the app on Mac,
+    and when you leave the app (switch away) on iPhone. If nothing
+    has changed, the backup is skipped, and an empty library never
+    writes an empty backup
+  · It's a visible safety copy and doesn't take part in syncing —
+    it never reads or merges other devices' files and never changes
+    your items
+  · To restore, use "Bulk import from JSON…" above and pick that file
+  · If you see "Backup failed", make sure you're signed in to iCloud
+    with iCloud Drive turned on
+  · Duplicates left behind by the old "Manual Sync" aren't removed
+    automatically — delete them by hand
+
+Clear all: ⌘, → Data tab → Clear all data (iPhone: Settings → Data)
            Destructive, two-step confirm (export first)
+  Removes all items, locations, history and tags — this can't be
+  undone. With iCloud Sync on, the data on your other devices signed
+  in to the same Apple Account is erased too.
+  If something goes wrong, nothing is deleted and the reason is shown.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -481,10 +692,23 @@ General tab:
                     Both off = entries go straight in, no dialogs
   · Auto-tag        Toggle auto tag suggestion on/off
   · Global shortcut Default ⌥⌘N — click the button to enter
-                    capture mode and press any modifier-key combo
-                    to rebind. Works system-wide, from any app.
+                    capture mode and press a new combo to rebind.
+                    It must include ⌘, ⌥ or ⌃ (⇧ alone doesn't
+                    count). Combos already used by the system or
+                    by common editing are rejected with an
+                    explanation — for example ⌘-only ⌘Q / ⌘C,
+                    ⌥-only typing combos, ⌃Space for switching
+                    input sources, and screenshot shortcuts. If
+                    the new combo can't be registered (another app
+                    may be using it), your previous one is kept.
+                    Works system-wide, from any app.
   · QuickEntry      Toggle on/off (disabling also disables the
                     global shortcut)
+  · iCloud Sync     Toggle on/off (on by default; takes effect the
+                    next time you open the app). Below it: your
+                    iCloud account, Account ID, last received /
+                    last sent times, and a "Sync Now" button (see
+                    "iCloud Sync")
 
 Tags tab:
   · View all tags with item counts
@@ -505,7 +729,7 @@ AI tab:
   · "View illustrated setup guide (web)" link (new in v0.2.0):
     opens the step-by-step web tutorial
 
-Notifications tab:
+Notifications (in the General tab):
   · Frequency       Daily / Weekly / 1st of each month
   · Day of week     Appears when "Weekly" is selected — pick any
                     day from Monday to Sunday (default: Monday)
@@ -533,8 +757,13 @@ Locations tab:
     "Merge all into…" buttons at the top
 
 Data tab:
-  · Import from JSON
-  · Clear all data (destructive)
+  · Bulk export to JSON…
+  · Bulk import from JSON… (with the "Skip duplicate items on
+    import" toggle)
+  · iCloud Drive Backup: the "Back Up Now" button and the last
+    backup time
+  · Clear all data (destructive; with iCloud Sync on, your other
+    devices are cleared too)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -584,11 +813,11 @@ AI status (shown only when an API key is configured):
   ℹ️  About
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Author: Bam Cope
+  Author: Chengzhu Zhao
   Email:  pluginexpert2@gmail.com
   Built with: Claude Code
 
 Menu bar  Whereabouts → About Whereabouts.
 
 
-Version: 0.2.0 (build 1)
+Version: 1.1 (build 2)

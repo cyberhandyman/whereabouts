@@ -135,11 +135,12 @@ enum AISettings {
     static var hasActiveKey: Bool { currentClient() != nil }
 
     /// 按 activeProvider 构造一个就绪的 client;凭据不全返回 nil。
-    /// 调用方:`if let c = AISettings.currentClient() { ... try await c.understand(item: item) }`
+    /// 调用方:`if let c = AISettings.currentClient() { ... try await c.understand(AIItemSnapshot(item: …)) }`
+    /// Phase 122:key / model 去首尾空白时连换行一起去(以前只去空格,粘贴带换行的 key 会被原样发出)。
     static func currentClient() -> AIChatClient? {
         switch activeProvider {
         case .claude:
-            let key = claudeAPIKey.trimmingCharacters(in: .whitespaces)
+            let key = claudeAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !key.isEmpty else { return nil }
             return ClaudeClient(
                 apiKey: key,
@@ -148,8 +149,8 @@ enum AISettings {
                 systemPrompt: systemPrompt
             )
         case .volcengine:
-            let key = volcAPIKey.trimmingCharacters(in: .whitespaces)
-            let mdl = volcModel.trimmingCharacters(in: .whitespaces)
+            let key = volcAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            let mdl = volcModel.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !key.isEmpty, !mdl.isEmpty else { return nil }
             return VolcengineClient(
                 apiKey: key,
@@ -281,7 +282,7 @@ enum AISettings {
     // MARK: - 默认 prompt
 
     /// 默认 prompt —— 跟解析器的本地行为对齐:配件不抽 model、spec 词留 name、likely-model 才当 model。
-    /// 改这个时同步检查 AIPayload.userMessage(for:availableTags:) 的 JSON 字段。
+    /// 改这个时同步检查 AIPayload.userMessage(for:) 的 JSON 字段。
     static let defaultSystemPrompt: String = """
 你是一个专门帮中文物品记录 app(何处 / Whereabouts)做字段解析的助手。
 
@@ -295,7 +296,7 @@ JSON Schema:
   "model": string | null,           // 真正的型号 token(字母数字混合的代号),例:"KM003C"、"U60Pro"、"GT6";没有就 null
   "version": string | null,         // 容量/尺寸/规格,例:"512GB"、"11寸";没有就 null
   "color": string | null,           // 颜色词,例:"玫瑰金"、"黑色";没有就 null
-  "purchaseDate": string | null,    // ISO 日期 "YYYY-MM-DD";不确定就 null
+  "purchaseDate": string | null,    // 按原文实际精度:只说年 → "YYYY"(例 "2024");说到月 → "YYYY-MM";精确到日 → "YYYY-MM-DD";不要把没说的月/日补成 01;不确定就 null
   "purchaseSource": string | null,  // 购买/获得渠道,任何来源描述都行:"京东"/"闲鱼"/"线下"/"朋友送的"/"二手"/"公司发的"...;不确定就 null
   "locationPath": [string] | null,  // 嵌套位置,父 → 子,例:["卧室","抽屉"];位置没变就 null,不要瞎改
   "tag": string                     // **必选**字段;**必须**是 user message 给的 available_tags 列表里的一个 name;都不合适就输出 "其他";不要自己造新标签名

@@ -81,7 +81,10 @@ struct BatchTagsSheet: View {
             }
             .onAppear(perform: initStates)
         }
+        // Phase 122:固定最小宽度只给 macOS sheet;iPhone 屏宽 < 380pt 会撑出屏幕。
+        #if os(macOS)
         .frame(minWidth: 380, idealWidth: 460, minHeight: 360, idealHeight: 480)
+        #endif
     }
 
     /// 初始化每个 tag 的观测态。
@@ -218,7 +221,7 @@ struct BatchLocationSheet: View {
     /// 最近用过的 5 个位置(按 lastSeenAt 降序去重)。跟 detail 一样查 modelContext。
     private var recentLocations: [Location] {
         let descriptor = FetchDescriptor<Item>(
-            predicate: #Predicate<Item> { !$0.isDeleted },
+            predicate: #Predicate<Item> { $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Item.lastSeenAt, order: .reverse)]
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
@@ -308,7 +311,10 @@ struct BatchLocationSheet: View {
             .onAppear { focused = true }
         }
         // Phase 76:加了 chip 行后内容变高,放宽 minHeight 让 chip 不被挤掉
+        // Phase 122:固定最小宽度只给 macOS sheet;iPhone 屏宽 < 380pt 会撑出屏幕。
+        #if os(macOS)
         .frame(minWidth: 420, idealWidth: 480, minHeight: 360, idealHeight: 420)
+        #endif
     }
 
     /// Phase 76:同详情页 locationEditor 的两行 chip 提示。
@@ -366,6 +372,11 @@ struct BatchLocationSheet: View {
     private func commit() {
         let path = preview
         guard !path.isEmpty else { return }
+        // Phase 122:0 件物品时不建位置 —— 否则凭空留下一个没人用的孤儿位置。
+        guard !items.isEmpty else {
+            dismiss()
+            return
+        }
         // Phase 68 复用:走 bestMatchOrEnsure 而非 ensure,这样 case-insensitive 命中 +
         // 合并相邻段 + 全局兜底查都生效,跟 AI 路径一致。
         let loc = Location.bestMatchOrEnsure(path: path, in: modelContext)
@@ -446,7 +457,10 @@ struct BatchSourceSheet: View {
             }
             .onAppear { focused = true }
         }
+        // Phase 122:固定最小宽度只给 macOS sheet;iPhone 屏宽 < 380pt 会撑出屏幕。
+        #if os(macOS)
         .frame(minWidth: 380, idealWidth: 460, minHeight: 240, idealHeight: 280)
+        #endif
     }
 
     private func commit() {

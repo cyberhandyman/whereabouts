@@ -9,10 +9,13 @@ import UniformTypeIdentifiers  // UTType.json — fileExporter / FileDocument
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     /// 原始查询:只取未软删除的,再按 updatedAt desc 排;运行时按 sortMode 重排序。
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var rawItems: [Item]
     @Query private var allTags: [Tag]
+    /// Phase 122:库里**全部**物品(含回收站里软删除的)—— 只用来发现"被彻底删掉"的物品
+    /// (别的设备经 CloudKit 删 / 回收站清空),好清掉还指着它的 @State。见 pruneStaleReferences。
+    @Query private var storeItems: [Item]
 
     // Phase 116:名言库挪到 Shared/QuoteBank.swift(iOS 也用)。
 
@@ -109,7 +112,17 @@ struct ContentView: View {
     @State private var batchEdit: BatchEditTarget?
 
     /// Phase 17:输入里给的单段位置撞上多个同名叶子,等用户挑一个。
+    /// Phase 122:这个只是**当前弹出**的那条;整批等消歧的条目在 ambiguousQueue 里。
     @State private var pendingAmbiguousLocation: PendingAmbiguousLocation?
+    /// Phase 122:本次录入里所有还没选位置的歧义条目(队首 = 正在弹的 sheet)。
+    /// 之前一次录入多条时,每条歧义都覆盖同一个 pendingAmbiguousLocation、draft 也被清掉,
+    /// 只剩最后一条能选,其余静默丢失;取消 sheet 那条也丢。
+    @State private var ambiguousQueue: [PendingAmbiguousLocation] = []
+    /// Phase 122:最近一次弹出的歧义条目 id —— sheet 关掉时它还在队里 = 用户取消了。
+    @State private var presentedAmbiguousID: UUID?
+    /// Phase 122:本批次已落库条数 / 被用户取消(没选位置)的条目 —— 决定最后 draft 怎么处理。
+    @State private var entryBatchSavedCount = 0
+    @State private var entryBatchCancelled: [InputParser.Parsed] = []
 
     /// Phase 91:右键"借给…"打开的 sheet 的目标物品。non-nil 时弹 sheet。
     @State private var lentSheetItem: Item?
@@ -302,7 +315,8 @@ struct ContentView: View {
         // 用 sheet 而非 confirmationDialog —— body 修饰符链已经够长,加一个
         // dialog 会触发 SwiftUI 的 type-check 超时。sheet 是单 modifier,且
         // 候选行的 UI 比 dialog 的扁平按钮列表更易读。
-        .sheet(item: $pendingAmbiguousLocation) { ctx in
+        // Phase 122:onDismiss 统一推进队列(选完 / 取消 / Esc 都走这里)。
+        .sheet(item: $pendingAmbiguousLocation, onDismiss: advanceAmbiguousQueue) { ctx in
             AmbiguousLocationPicker(context: ctx) { choice in
                 resolveAmbiguousLocation(ctx, choice: choice)
             }
@@ -451,6 +465,8 @@ struct ContentView: View {
             }
         }
         .task {
+            // Phase 122:本地库没打开(内存兜底)时不播种、不清理、不写一次性标记。
+            guard !AppContainer.usingInMemoryFallback else { return }
             // 首次启动 seed 预设 tag。@AppStorage flag 防止用户删了重启被覆盖。
             seedTagsIfNeeded()
             // Phase 59:版本化扩充 —— 升级后补 seed 新加的预设,但不动用户自建/已删的。
@@ -487,6 +503,14 @@ struct ContentView: View {
     ///      (拆完可能多出更多 root,所以**先拆后合**)
     /// 任一步影响过节点时弹底部 toast 告知。
     private func mergeDuplicateRootsIfNeeded() {
+        // Phase 122:回收站状态改以 deletedAt 为准,先对账一次(见 Item.isDeleted 注释)。
+        Item.reconcileTrashState(in: modelContext)
+        // Phase 122:标签去重(多设备各自 seed 预设留下的双胞胎)。安全:删 tag 只断挂载。
+        Tag.mergeDuplicates(in: modelContext)
+        // Phase 122:CloudKit 在线时**不自动**动位置树 —— 合并会删掉重复的根,而根的
+        // 子位置是 cascade 删除;另一台设备上还没同步过来的子位置会被连带删掉,
+        // 两台设备挑的保留者不一致时甚至会互删。重复位置交给设置 → 位置里手动合并。
+        guard !AppContainer.cloudKitActive else { return }
         let split = Location.splitMalformedNames(in: modelContext)
         let merged = Location.mergeDuplicateRoots(in: modelContext)
         let total = split + merged
@@ -599,29 +623,30 @@ struct ContentView: View {
             // 无 key 时 aiStatus 留 .notConfigured,状态栏不渲染 AI 行。
             checkAIConnection()
         }
-        // Phase 100:QuickEntry 在"搜索"模式提交时广播 query;主窗口收到后把
-        // 关键词写进 filter.search,并把列表 facet 展开(确保搜索栏可见)。
-        .onReceive(NotificationCenter.default.publisher(for: .quickEntrySearch)) { note in
-            guard let q = note.userInfo?["query"] as? String else { return }
-            filter.search = q
-            facetsExpanded = true  // 确保搜索区可见
+        // Phase 100 / 106 → Phase 122:小窗搜索(.quickEntrySearch)和点置顶通知(.openItemByName)
+        // 改由 app 级 MainWindowRouter 监听(主窗口关着也能响应)。router 先存 pendingRoute,
+        // 再新开主窗口(→ 这里 onAppear 取走)或通知已开的主窗口(→ .mainWindowRouteReady 取走)。
+        .onAppear {
+            MainWindowRouter.shared.mainWindowDidAppear()
+            applyPendingRoute()
         }
-        // Phase 106:点击置顶通知 banner 后,NotificationTapForwarder 广播
-        // `.openItemByName`;主窗口接住后把名字写进搜索,并强制激活窗口。
-        .onReceive(NotificationCenter.default.publisher(for: .openItemByName)) { note in
-            guard let name = note.userInfo?["itemName"] as? String else { return }
-            filter.clearAll()  // 不让旧筛选条件挡住目标物品
-            filter.search = name
-            #if os(macOS)
-            NSApp.activate(ignoringOtherApps: true)
-            #endif
+        .onDisappear {
+            MainWindowRouter.shared.mainWindowDidDisappear()
         }
-        #if os(macOS)
-        // Phase 117:退出 app 时自动往 iCloud 云盘写一份 JSON 备份(同步版,quit 前完成)。
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-            CloudBackup.backUpBlocking(context: modelContext)
+        .onReceive(NotificationCenter.default.publisher(for: .mainWindowRouteReady)) { _ in
+            applyPendingRoute()
         }
-        #endif
+        // Phase 122:别的设备经 CloudKit 把物品**彻底删掉**后,清掉还指着它的 sheet / 弹框 / 选中,
+        // 防止 "backing data could no longer be found" 崩溃。软删除(进回收站)的仍在库里,不受影响。
+        .onChange(of: Set(storeItems.map(\.persistentModelID))) { _, alive in
+            pruneStaleReferences(alive: alive)
+        }
+        // Phase 117 的"退出时备份"挪到 MacAppDelegate.applicationWillTerminate(Phase 122)。
+        // Phase 122:CloudKit 每导入一批别的设备的改动 → 合并同名标签 + 重排置顶提醒。
+        .onChange(of: CloudSyncMonitor.shared.importGeneration) { _, _ in
+            Tag.mergeDuplicates(in: modelContext)
+            NotificationScheduler.shared.rescheduleIfEnabled()
+        }
     }
 
     /// Phase 97:状态栏 AI 行。
@@ -1887,15 +1912,19 @@ struct ContentView: View {
                 )
                 return  // 等用户决定,不清 draft
             }
+            beginEntryBatch()
             addNewItem(parsed, rawInput: rawForBatch)
+            settleEntryBatchIfDone()
             return
         }
 
         // 多条:批量入库,跳过重复检测(批量录入一般是初次整理,逐条弹框反人类)
+        beginEntryBatch()
         for parsed in list {
             addNewItem(parsed, rawInput: rawForBatch)
         }
-        // addNewItem 里会清 draft 并对焦,这里多次调用也无所谓最终都会清空
+        // Phase 122:draft 等整批都有结果(歧义条目都选完 / 取消)才处理,见 settleEntryBatchIfDone
+        settleEntryBatchIfDone()
     }
 
     /// 同名优先;否则较短一方至少 2 字、且较长包含较短 → 算潜在同一件东西。
@@ -1916,10 +1945,12 @@ struct ContentView: View {
         // 让用户选,而不是直接建一个孤立顶层。
         switch Location.resolve(path: parsed.locationPath, in: modelContext) {
         case .ambiguous(let candidates, let leaf):
-            pendingAmbiguousLocation = PendingAmbiguousLocation(
+            // Phase 122:进队列(不再覆盖上一条),当前没在弹就弹队首。
+            ambiguousQueue.append(PendingAmbiguousLocation(
                 parsed: parsed, candidates: candidates, originalLeaf: leaf, rawInput: rawInput
-            )
-            // 不写库;等用户在 confirmationDialog 里点完一个选项再走 finalizeNewItem。
+            ))
+            presentNextAmbiguousIfIdle()
+            // 不写库;等用户在 sheet 里点完一个选项再走 finalizeNewItem。
             return
         case .useExisting(let loc):
             finalizeNewItem(parsed, location: loc, rawInput: rawInput)
@@ -1930,6 +1961,8 @@ struct ContentView: View {
     }
 
     /// 处理用户的歧义弹窗选择 —— 把暂存的 Parsed 真正落库。
+    /// Phase 122:同一批里位置写法完全相同的歧义条目(如"钥匙、耳机在抽屉第一层")
+    /// 是同一个问题,一并用这次的选择落库,不再逐条重复问。下一条由 onDismiss 推进。
     private func resolveAmbiguousLocation(_ ctx: PendingAmbiguousLocation, choice: AmbiguousChoice) {
         let loc: Location?
         switch choice {
@@ -1938,8 +1971,69 @@ struct ContentView: View {
         case .newTopLevel:
             loc = Location.ensure(path: ctx.parsed.locationPath, in: modelContext)
         }
-        finalizeNewItem(ctx.parsed, location: loc, rawInput: ctx.rawInput)
+        let samePath = ambiguousQueue.filter { $0.parsed.locationPath == ctx.parsed.locationPath }
+        ambiguousQueue.removeAll { $0.parsed.locationPath == ctx.parsed.locationPath }
+        let targets = samePath.contains(where: { $0.id == ctx.id }) ? samePath : [ctx] + samePath
+        for p in targets {
+            finalizeNewItem(p.parsed, location: loc, rawInput: p.rawInput)
+        }
         pendingAmbiguousLocation = nil
+    }
+
+    /// Phase 122:当前没有歧义 sheet 在弹 → 弹队首。
+    private func presentNextAmbiguousIfIdle() {
+        guard pendingAmbiguousLocation == nil, let next = ambiguousQueue.first else { return }
+        presentedAmbiguousID = next.id
+        pendingAmbiguousLocation = next
+    }
+
+    /// Phase 122:歧义 sheet 关掉后(选完 / 取消 / Esc)推进队列。
+    /// 刚才弹的那条还在队里 = 用户没选就关了 → 它和同位置写法的条目记为"取消"(不落库)。
+    private func advanceAmbiguousQueue() {
+        if let id = presentedAmbiguousID,
+           let cancelled = ambiguousQueue.first(where: { $0.id == id }) {
+            let path = cancelled.parsed.locationPath
+            entryBatchCancelled += ambiguousQueue.filter { $0.parsed.locationPath == path }.map(\.parsed)
+            ambiguousQueue.removeAll { $0.parsed.locationPath == path }
+        }
+        presentedAmbiguousID = nil
+        if ambiguousQueue.isEmpty {
+            settleEntryBatchIfDone()
+        } else {
+            presentNextAmbiguousIfIdle()
+        }
+    }
+
+    /// Phase 122:开始一次录入批次(commit / 重复弹框"新建" / 更新弹框"还是新建")。
+    private func beginEntryBatch() {
+        // 上一批还在消歧(sheet 是模态的,理论上走不到这里)→ 并进同一批,不清计数
+        guard ambiguousQueue.isEmpty else { return }
+        entryBatchSavedCount = 0
+        entryBatchCancelled = []
+    }
+
+    /// Phase 122:整批都有了结果(歧义条目都选完或取消)才处理 draft:
+    ///   - 全部落库 → 清空 draft(原行为)
+    ///   - 有取消的、且一条都没落库(典型:单条录入取消)→ 原文原样留在输入框,
+    ///     用户把位置写完整再回车即可(跟"重复提醒"点取消一致,不清 draft)
+    ///   - 部分落库 + 部分取消 → draft 换成"取消的那几条"(名字 在 位置),
+    ///     避免再回车把已经存了的重复建一遍;底部 toast 说明
+    private func settleEntryBatchIfDone() {
+        guard ambiguousQueue.isEmpty, pendingAmbiguousLocation == nil else { return }
+        if entryBatchCancelled.isEmpty {
+            draft = ""
+        } else if entryBatchSavedCount > 0 {
+            //   跟 appendLocationToDraft 一样用 "在" 连接(parser 的中文分隔符),多条用全角逗号分开。
+            draft = entryBatchCancelled.map { p in
+                p.locationPath.isEmpty
+                    ? p.name
+                    : "\(p.name) 在 \(p.locationPath.joined(separator: " > "))"
+            }.joined(separator: "\u{FF0C}")
+            flashBatchAck(String(localized: "ambiguousLocation.cancel.restored \(entryBatchCancelled.count)"))
+        }
+        entryBatchCancelled = []
+        entryBatchSavedCount = 0
+        focused = .input
     }
 
     /// 真正落库的尾段(Phase 17 拆出来):写 Item / Log / 自动标签 / 清 draft。
@@ -1968,37 +2062,18 @@ struct ContentView: View {
         if useAIOnInput && AISettings.hasActiveKey {
             runAIUnderstand(items: [item])
         }
-        draft = ""
+        // Phase 122:不在这里清 draft —— 同批可能还有歧义条目在等用户选位置,
+        // 提前清掉的话取消那条就丢了。改由 settleEntryBatchIfDone 统一处理。
+        entryBatchSavedCount += 1
         focused = .input
     }
 
-    /// Phase 22:升级后跑一次,把没挂任何 tag 的存量物品按物品名匹一遍预设标签。
-    /// 用 @AppStorage flag 保证只跑一次。受 autoTagSuggestEnabled 控制 —— 关掉自动建议
-    /// 的用户也不希望被迁移惊到。
+    /// Phase 22 曾在这里把没挂 tag 的存量物品按名字补一遍预设标签(给 v0.1.3 之前的老用户)。
+    /// Phase 122:停用 —— flag 是本机偏好,每台新装的 Mac 第一次打开主窗口都会跑一遍,
+    /// 把**从 iCloud 同步来的**无标签物品全按名字自动挂上标签,再同步回所有设备
+    /// (用户特意不打标签的也被改)。App Store 版用户没有需要迁移的老数据,直接置 done。
     private func runAutoTagMigrationIfNeeded() {
-        guard !autoTagMigrationDone else { return }
-        guard autoTagSuggestEnabled else {
-            // 用户禁用了自动建议:不跑迁移,但也置 flag 防止以后开启又来一遍。
-            autoTagMigrationDone = true
-            return
-        }
-        var touched = 0
-        for item in items where item.tags.isEmpty {
-            guard let hex = InputParser.suggestTagColorHex(forName: item.name) else { continue }
-            let target = hex.lowercased()
-            let candidate = allTags
-                .filter { $0.colorHex.lowercased() == target }
-                .sorted(by: { $0.createdAt < $1.createdAt })
-                .first
-            guard let tag = candidate else { continue }
-            item.tags.append(tag)
-            touched += 1
-        }
         autoTagMigrationDone = true
-        if touched > 0 {
-            // 用底部 toast 提示用户有变化(没"撤销"按钮 —— 一条条人工 ItemEditView 取消即可)。
-            flashBatchAck(String(localized: "autoTag.migration.ack \(touched)"))
-        }
     }
 
     /// Phase 14 自动建议挂载逻辑 —— 静默 no-op 如果:开关关 / 没匹中关键词 / 找不到同色 tag。
@@ -2061,6 +2136,7 @@ struct ContentView: View {
     /// 这一般会落到一个奇怪的物品名(整句),用户后续可以编辑。
     private func createFromRawDraft() {
         let list = InputParser.parseMultiple(draft)
+        beginEntryBatch()  // Phase 122:draft 由 settleEntryBatchIfDone 统一收尾
         if list.isEmpty {
             let raw = draft.trimmingCharacters(in: .whitespacesAndNewlines)
             if !raw.isEmpty {
@@ -2069,6 +2145,7 @@ struct ContentView: View {
         } else {
             for p in list { addNewItem(p) }
         }
+        settleEntryBatchIfDone()
         pendingUpdate = nil
     }
 
@@ -2096,6 +2173,7 @@ struct ContentView: View {
             if dup.existing.model          == nil { dup.existing.model          = dup.newModel }
             if dup.existing.color          == nil { dup.existing.color          = dup.newColor }
             if dup.existing.version        == nil { dup.existing.version        = dup.newVersion }
+            draft = ""
         } else {
             let parsed = InputParser.Parsed(
                 name: dup.newName, locationPath: dup.newPath,
@@ -2103,18 +2181,59 @@ struct ContentView: View {
                 purchaseSource: dup.newSource, model: dup.newModel,
                 color: dup.newColor, version: dup.newVersion
             )
+            // Phase 122:新建可能撞上歧义位置 → 等 sheet 选完再清 draft(取消时原文保留)
+            beginEntryBatch()
             addNewItem(parsed)
+            settleEntryBatchIfDone()
         }
-        draft = ""
         pendingDuplicate = nil
         focused = .input
     }
 
     private func delete(at offsets: IndexSet) {
-        for index in offsets {
+        // Phase 122:offsets 来自 ForEach(filteredItems),必须按同一个数组取 ——
+        // 之前取 items[index],有搜索 / 筛选时会把**别的物品**扔进回收站。
+        let list = filteredItems
+        for index in offsets where list.indices.contains(index) {
             // 软删除 —— swipe / onDelete 都进回收站,不直接物理删
-            items[index].markDeleted()
+            list[index].markDeleted()
         }
+    }
+
+    // MARK: - Phase 122:主窗口路由 / 失效引用清理
+
+    /// Phase 122:取走 MainWindowRouter 暂存的路由(小窗搜索 / 点置顶通知)并应用。
+    private func applyPendingRoute() {
+        guard let route = MainWindowRouter.shared.consumePendingRoute() else { return }
+        switch route {
+        case .search(let q):
+            filter.search = q
+            facetsExpanded = true  // 确保搜索区可见
+        case .focusItem(let name):
+            filter.clearAll()  // 不让旧筛选条件挡住目标物品
+            filter.search = name
+        }
+    }
+
+    /// Phase 122:清掉指向"已不在库里"的物品的状态(alive = storeItems 的 id 集合,含回收站)。
+    /// 只对**彻底消失**的物品起作用;软删除的仍在 alive 里,正常流程不受影响。
+    private func pruneStaleReferences(alive: Set<PersistentIdentifier>) {
+        func gone(_ item: Item?) -> Bool {
+            guard let item else { return false }
+            return !alive.contains(item.persistentModelID)
+        }
+        if gone(editingItem) { editingItem = nil }
+        if gone(pendingDelete) { pendingDelete = nil }
+        if gone(lentSheetItem) { lentSheetItem = nil }
+        if gone(relatedPickerSource) { relatedPickerSource = nil }
+        if let target = batchEdit, target.items.contains(where: { gone($0) }) { batchEdit = nil }
+        if let pair = pendingAutoTagUndo, gone(pair.item) { pendingAutoTagUndo = nil }
+        if let dup = pendingDuplicate, gone(dup.existing) { pendingDuplicate = nil }
+        if let upd = pendingUpdate, gone(upd.item) { pendingUpdate = nil }
+        let liveSelection = selection.intersection(alive)
+        if liveSelection != selection { selection = liveSelection }
+        let liveBulk = pendingBulkDelete.intersection(alive)
+        if liveBulk != pendingBulkDelete { pendingBulkDelete = liveBulk }
     }
 
     // MARK: - Phase 12 批量操作
@@ -2205,16 +2324,27 @@ struct ContentView: View {
         // 用挂在它下面的最新一件 item.lastSeenAt 作为代理。这样列表前面是更可能再用的位置。
         let locPaths = locationsSortedByRecency()
 
-        Task {
+        // Phase 122:Task 显式钉在 MainActor —— 读 item / 拍快照 / 写回都在主线程;
+        // 只有 client.understand 的网络部分离开主线程,且只拿 Sendable 快照。
+        Task { @MainActor in
             for item in snapshot {
                 let id = item.persistentModelID
+                // 排队期间可能已被删(批量时前面几件要跑好一会儿)—— 不在了直接跳过,别去读已删对象。
+                guard aiTargetStillExists(item, in: ctx) else {
+                    aiProcessingIDs.remove(id)
+                    continue
+                }
+                let request = AIItemSnapshot(item: item, availableTags: tagNames, availableLocations: locPaths)
                 do {
-                    let result = try await client.understand(item: item, availableTags: tagNames, availableLocations: locPaths)
-                    await MainActor.run {
-                        applyAIResult(result, to: item, in: ctx)
+                    let result = try await client.understand(request)
+                    // await 期间可能被彻底删除 / 被 CloudKit 合并删掉 → 丢弃结果。
+                    guard aiTargetStillExists(item, in: ctx) else {
                         aiProcessingIDs.remove(id)
-                        aiCompletedIDs.insert(id)
+                        continue
                     }
+                    applyAIResult(result, to: item, in: ctx)
+                    aiProcessingIDs.remove(id)
+                    aiCompletedIDs.insert(id)
                     // 4 秒后清掉"✓ 已完成"标记,行恢复正常。
                     Task {
                         try? await Task.sleep(for: .seconds(4))
@@ -2223,8 +2353,8 @@ struct ContentView: View {
                 } catch {
                     // 失败:从"处理中"移除,不写"已完成",静默 print。
                     // 用户可以右键再点一次重试。多选时不刷屏。
-                    print("AI understand failed for \(item.name): \(error)")
-                    await MainActor.run { _ = aiProcessingIDs.remove(id) }
+                    print("AI understand failed for \(request.name): \(error)")
+                    aiProcessingIDs.remove(id)
                 }
             }
         }
@@ -2295,7 +2425,7 @@ struct TrashView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<Item> { $0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt != nil },
            sort: \Item.updatedAt, order: .reverse)
     private var deletedItems: [Item]
 

@@ -137,8 +137,9 @@ struct LocationsSettingsTab: View {
                 }
             }
         }
+        // Phase 122:标题串带 %lld,必须传计数,否则显示字面 "%lld"。
         .confirmationDialog(
-            "settings.locations.batch.delete.title",
+            "settings.locations.batch.delete.title \(batchSelection.count)",
             isPresented: $showingBatchDeleteConfirm
         ) {
             Button("action.delete", role: .destructive) {
@@ -240,6 +241,11 @@ struct LocationTreeRow: View {
 
     /// 是否展开子节点。root 默认展开,深层默认折叠。
     @State private var expanded: Bool
+    /// Phase 122:重命名草稿。旧版 TextField 直接绑 location.name,每敲一个字
+    /// 房间/独立位置分区和排序都会重算 → 行跳区、输入框失焦;还允许空名 / 同级重名。
+    /// 现在先改草稿,回车或失焦时再校验提交。
+    @State private var nameDraft: String
+    @FocusState private var nameFocused: Bool
 
     init(location: Location, depth: Int, allLocations: [Location],
          batchSelection: Binding<Set<PersistentIdentifier>>,
@@ -250,6 +256,7 @@ struct LocationTreeRow: View {
         self._batchSelection = batchSelection
         self.onDelete = onDelete
         self._expanded = State(initialValue: depth < 1)
+        self._nameDraft = State(initialValue: location.name)
     }
 
     private var itemCount: Int { location.items.count }
@@ -281,8 +288,20 @@ struct LocationTreeRow: View {
             checkboxButton
             expandToggleOrSpacer
             iconView
-            TextField("settings.locations.row.name", text: $location.name)
+            TextField("settings.locations.row.name", text: $nameDraft)
                 .textFieldStyle(.roundedBorder)
+                .focused($nameFocused)
+                .onSubmit(commitRename)
+                .onChange(of: nameFocused) { _, focused in
+                    if !focused { commitRename() }
+                }
+                // 别处(同步 / 合并)改了名字,且用户没在编辑 → 草稿跟上。
+                .onChange(of: location.name) { _, newName in
+                    if !nameFocused { nameDraft = newName }
+                }
+                // 切走设置 tab / 关窗口 / iOS 返回时不一定先触发失焦 —— 行消失前再提交一次,
+                // 免得刚改的名字丢掉(commitRename 对已删除的节点、没改动的草稿都是空操作)。
+                .onDisappear { commitRename() }
             Spacer(minLength: 4)
             if subtreeItemCount > 0 {
                 Text("settings.locations.row.itemCount \(subtreeItemCount)")
@@ -292,6 +311,31 @@ struct LocationTreeRow: View {
             mergeMenu
             deleteButton
         }
+    }
+
+    /// Phase 122:提交重命名 —— 去首尾空白;空名或与同级(同一 parent 下)重名则放弃并还原草稿。
+    /// 同级比较用 foldedForMatch(大小写 / 全半角不敏感),跟 Location.ensure 的匹配口径一致。
+    private func commitRename() {
+        // 行所在节点已被删除 / 合并掉时不再写。
+        guard location.modelContext != nil else { return }
+        let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != location.name else {
+            nameDraft = trimmed
+            return
+        }
+        let siblings: [Location] = location.parent?.children
+            ?? allLocations.filter { $0.parent == nil }
+        let folded = trimmed.foldedForMatch
+        let clashes = siblings.contains {
+            $0.persistentModelID != location.persistentModelID && $0.name.foldedForMatch == folded
+        }
+        guard !trimmed.isEmpty, !clashes else {
+            nameDraft = location.name
+            return
+        }
+        location.name = trimmed
+        nameDraft = trimmed
+        try? modelContext.save()
     }
 
     @ViewBuilder

@@ -22,7 +22,7 @@ struct RelatedItemsPicker: View {
 
     /// 全集:按更新时间倒序,排除 deleted。SwiftData 不能在 @Query 里
     /// 直接用 source.relatedGroupID(运行时值)过滤,所以这里取全集后内存里 filter。
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse) private var allItems: [Item]
 
     @State private var search: String = ""
@@ -32,7 +32,7 @@ struct RelatedItemsPicker: View {
     /// 当前组里有几件(包括 source 自己)。0 = source 还没入组。
     private var currentGroupSize: Int {
         guard let gid = source.relatedGroupID else { return 0 }
-        return RelatedGroup.members(of: gid, in: modelContext).filter { !$0.isDeleted }.count
+        return RelatedGroup.members(of: gid, in: modelContext).filter { !$0.isTrashed }.count
     }
 
     /// 候选 = 全集 - 自己 - 已同组 - (按搜索词过滤)。
@@ -82,7 +82,10 @@ struct RelatedItemsPicker: View {
                 Text(verbatim: msg)
             }
         }
+        // Phase 122:固定最小宽度只给 macOS sheet;iPhone 屏宽 < 380pt 会撑出屏幕。
+        #if os(macOS)
         .frame(minWidth: 420, idealWidth: 520, minHeight: 420, idealHeight: 560)
+        #endif
     }
 
     @ViewBuilder
@@ -156,7 +159,7 @@ struct RelatedItemsPicker: View {
             // 候选本身已经在另外一个组里 → 给用户提示"链上后会合并组"
             if let gid = item.relatedGroupID, gid != source.relatedGroupID {
                 let n = RelatedGroup.members(of: gid, in: modelContext)
-                    .filter { !$0.isDeleted }.count
+                    .filter { !$0.isTrashed }.count
                 Text("related.picker.willMerge \(n)")
                     .font(.caption2)
                     .foregroundStyle(.orange)

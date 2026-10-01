@@ -74,6 +74,9 @@ struct AmbiguousLocationPicker: View {
                 }
             }
         }
+        // Phase 122:固定最小宽度只给 macOS sheet;iPhone 屏宽 < 380pt 会撑出屏幕。
+        #if os(macOS)
         .frame(minWidth: 400, idealWidth: 480, minHeight: 280, idealHeight: 360)
+        #endif
     }
 }

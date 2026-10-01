@@ -9,7 +9,7 @@ import UserNotifications
 struct IOSSettingsView: View {
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<Item> { !$0.isDeleted },
+    @Query(filter: #Predicate<Item> { $0.deletedAt == nil },
            sort: \Item.updatedAt, order: .reverse)
     private var items: [Item]
 
@@ -34,10 +34,9 @@ struct IOSSettingsView: View {
     @AppStorage("icloudSyncEnabled") private var icloudSyncEnabled: Bool = true
     /// 本次会话改过开关 → 显示"重启生效"提示。
     @State private var icloudPrefChanged = false
-    /// Phase 117:iCloud 云盘备份状态。
+    /// Phase 117:iCloud 云盘备份状态(Phase 122:只写不读)。
     @State private var backupBusy = false
     @State private var backupResult: Bool?
-    @State private var syncMerged = 0
 
     // 数据导入 / 导出
     @State private var showingExporter = false
@@ -331,9 +330,13 @@ struct IOSSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            // Phase 122:当前 iCloud 账号 + 账号识别码 + 上次收发时间 + 立即同步。
+            ICloudStatusRows()
         } footer: {
             if !icloudSyncEnabled {
                 Text("settings.icloud.footer.off")
+            } else if AppContainer.cloudKitActive && CloudSyncMonitor.shared.account == .noAccount {
+                Text("settings.icloud.footer.noAccount")
             } else if AppContainer.cloudKitActive {
                 Text("settings.icloud.footer.active")
             } else {
@@ -387,14 +390,12 @@ struct IOSSettingsView: View {
                     backupResult = nil
                     let ctx = modelContext
                     Task {
-                        // Phase 118:立即同步 = pull(合并去重)+ push
-                        let r = await CloudBackup.sync(context: ctx)
-                        await MainActor.run {
-                            backupBusy = false
-                            backupResult = r.ok
-                            syncMerged = r.merged
-                            if r.ok { Haptics.success() } else { Haptics.warning() }
-                        }
+                        // Phase 122:只备份(写本机文件),不再拉别的设备的 JSON 合并 ——
+                        // 那条路会复活已删物品、复制移动过的物品。同步全交给 CloudKit。
+                        let ok = await CloudBackup.backUp(context: ctx)
+                        backupBusy = false
+                        backupResult = ok
+                        if ok { Haptics.success() } else { Haptics.warning() }
                     }
                 } label: {
                     if backupBusy {
@@ -408,9 +409,7 @@ struct IOSSettingsView: View {
             }
             if let ok = backupResult {
                 Label {
-                    if ok && syncMerged > 0 {
-                        Text("settings.sync.merged \(syncMerged)")
-                    } else if ok {
+                    if ok {
                         Text("settings.backup.done")
                     } else {
                         Text("settings.backup.failed")
@@ -543,13 +542,30 @@ struct IOSSettingsView: View {
         }
     }
 
+    /// Phase 122:与 macOS DataSettingsTab.clearAll 同一做法 —— 逐条 fetch + delete
+    /// (CloudKit 能把每条删除同步到其它设备)、补上原来漏掉的 EditLog、save 失败回滚。
     private func clearAll() {
-        try? modelContext.delete(model: LocationLog.self)
-        try? modelContext.delete(model: Item.self)
-        try? modelContext.delete(model: Location.self)
-        try? modelContext.delete(model: Tag.self)
-        try? modelContext.save()
-        Haptics.warning()
+        do {
+            try deleteAll(EditLog.self)
+            try deleteAll(LocationLog.self)
+            try deleteAll(Item.self)
+            try deleteAll(Location.self)
+            try deleteAll(Tag.self)
+            try modelContext.save()
+            NotificationScheduler.shared.rescheduleIfEnabled()
+            Haptics.warning()
+        } catch {
+            modelContext.rollback()
+            withAnimation {
+                importAck = String(localized: "settings.data.clear.failed \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func deleteAll<T: PersistentModel>(_ type: T.Type) throws {
+        for obj in try modelContext.fetch(FetchDescriptor<T>()) {
+            modelContext.delete(obj)
+        }
     }
 }
 

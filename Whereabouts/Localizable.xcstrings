@@ -497,6 +497,35 @@
         }
       }
     },
+    "ambiguousLocation.cancel.restored %lld" : {
+      "comment" : "Phase 122: toast when some items of a multi-item entry were not saved because the location picker was cancelled.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item not saved (no location chosen) — put back in the input box"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items not saved (no location chosen) — put back in the input box"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条未选位置、没有保存,已放回输入框"
+          }
+        }
+      }
+    },
     "ambiguousLocation.message %@ %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2501,6 +2530,23 @@
         }
       }
     },
+    "edit.tag.detach" : {
+      "comment" : "Phase 122: item edit sheet — detach tag from this item only.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from This Item"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从这件物品上移除"
+          }
+        }
+      }
+    },
     "edit.toggle.recordDate" : {
       "comment" : "Edit form: toggle to enable purchase date input.",
       "localizations" : {
@@ -3851,13 +3897,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sync from iCloud"
+            "value" : "Sync with iCloud now"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从 iCloud 同步"
+            "value" : "立即与 iCloud 同步"
           }
         }
       }
@@ -4684,13 +4730,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Everything stays **on your device** — no account, no server"
+            "value" : "Your data stays **on your devices and in your own iCloud** — no sign-up, no third-party server"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "数据**全在本机**,没有账号、没有服务器"
+            "value" : "数据只在你的设备和**你自己的 iCloud** 里,没有注册、没有第三方服务器"
           }
         }
       }
@@ -5011,6 +5057,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止"
+          }
+        }
+      }
+    },
+    "record.voice.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speech recognition is unavailable right now — check your connection and microphone, or try again later."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语音识别暂不可用 —— 检查网络与麦克风,或稍后再试"
           }
         }
       }
@@ -5658,23 +5720,6 @@
         }
       }
     },
-    "settings.ai.apiKey.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign up at https://console.anthropic.com/ → API Keys to create one. Stored in macOS Keychain."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "到 https://console.anthropic.com/ 注册 → API Keys 生成。Key 存在系统 Keychain 里。"
-          }
-        }
-      }
-    },
     "settings.ai.apiKey.label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5749,13 +5794,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sign up at https://console.anthropic.com/ → API Keys to create a key starting with sk-ant-.\nEndpoint defaults to the official Anthropic URL — change to your proxy/relay URL if you use one.\n⚠️ Key is stored as **plain text** in the prefs plist (a deliberate trade-off for single-user ad-hoc-signed dev builds — Keychain would prompt on every rebuild)."
+            "value" : "Sign up at https://console.anthropic.com/ → API Keys to create a key starting with sk-ant-.\nEndpoint defaults to the official Anthropic URL — change to your proxy/relay URL if you use one.\n🔒 Your key is stored in this device's system Keychain, used only to call the AI provider you chose. It is never synced or uploaded, and the developer can't see it."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到 https://console.anthropic.com/ 注册 → API Keys 生成 sk-ant-... 开头的 key。\nEndpoint 默认是 Anthropic 官方,如果你用第三方中转站(例:某些代理服务),改成它给你的 URL。\n⚠️ Key 以**明文**保存在偏好设置 plist 里(单 Mac 个人 dev 版的取舍 —— 避免每出 build 都弹钥匙串授权框)。"
+            "value" : "到 https://console.anthropic.com/ 注册 → API Keys 生成 sk-ant-... 开头的 key。\nEndpoint 默认是 Anthropic 官方,如果你用第三方中转站(例:某些代理服务),改成它给你的 URL。\n🔒 Key 保存在本机系统钥匙串(Keychain)中,只用于向你选择的 AI 服务商发请求,不会同步或上传,开发者也看不到。"
           }
         }
       }
@@ -6227,13 +6272,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get an API Key at https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey (Volcengine Ark console → API Key management → Create).\nSet \"Model\" to either a model name (e.g. doubao-seed-1-6-250615) or the inference endpoint ID (e.g. ep-2025xxxx-xxxxx) — find it under \"Online Inference / Endpoint\" in the console.\nEndpoint defaults to the official Volcengine URL — change it to your URL if you use an OpenAI-compatible relay.\n⚠️ Key is stored as **plain text** in the prefs plist (deliberate trade-off for single-user dev builds)."
+            "value" : "Get an API Key at https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey (Volcengine Ark console → API Key management → Create).\nSet \"Model\" to either a model name (e.g. doubao-seed-1-6-250615) or the inference endpoint ID (e.g. ep-2025xxxx-xxxxx) — find it under \"Online Inference / Endpoint\" in the console.\nEndpoint defaults to the official Volcengine URL — change it to your URL if you use an OpenAI-compatible relay.\n🔒 Your key is stored in this device's system Keychain, used only to call the AI provider you chose. It is never synced or uploaded, and the developer can't see it."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到 https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey 申请 API Key(火山方舟控制台 → API Key 管理 → 创建)。\nModel 字段填 model 名(如 doubao-seed-1-6-250615)或推理接入点 endpoint ID(如 ep-2025xxxx-xxxxx)—— 在「在线推理 / 推理接入点」里能拿到。\nEndpoint 默认是火山方舟官方;用第三方 OpenAI 兼容中转站把它改成你的 URL。\n⚠️ Key 以**明文**保存在偏好设置 plist 里(单 Mac 个人 dev 版的取舍)。"
+            "value" : "到 https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey 申请 API Key(火山方舟控制台 → API Key 管理 → 创建)。\nModel 字段填 model 名(如 doubao-seed-1-6-250615)或推理接入点 endpoint ID(如 ep-2025xxxx-xxxxx)—— 在「在线推理 / 推理接入点」里能拿到。\nEndpoint 默认是火山方舟官方;用第三方 OpenAI 兼容中转站把它改成你的 URL。\n🔒 Key 保存在本机系统钥匙串(Keychain)中,只用于向你选择的 AI 服务商发请求,不会同步或上传,开发者也看不到。"
           }
         }
       }
@@ -6397,13 +6442,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sync complete"
+            "value" : "Backup complete"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步完成"
+            "value" : "备份完成"
           }
         }
       }
@@ -6414,13 +6459,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sync failed — make sure you're signed in to iCloud with iCloud Drive on"
+            "value" : "Backup failed — make sure you're signed in to iCloud with iCloud Drive on"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步失败 —— 请确认已登录 iCloud 并开启 iCloud 云盘"
+            "value" : "备份失败 —— 请确认已登录 iCloud 并开启 iCloud 云盘"
           }
         }
       }
@@ -6431,13 +6476,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Two channels: ① live sync — changes flow between your devices via iCloud automatically; ② manual sync — immediately pulls the data file other devices wrote to iCloud Drive, merges with de-duplication, and writes this device's latest data back (the file lives in iCloud Drive/Whereabouts)."
+            "value" : "Besides live sync, each device saves a JSON copy of all items to iCloud Drive › Whereabouts when you quit (Mac) or leave the app (iPhone); the file name includes the device type. It's a visible safety backup and doesn't take part in syncing — to restore, use Import above and pick that file."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "两条通道:① 实时同步 —— 改动自动经 iCloud 在你的设备间流动;② 手动同步 —— 立即拉取 iCloud 云盘里其它设备写入的数据文件、合并去重,并把本机最新数据写回去(文件在 iCloud 云盘/Whereabouts/,「文件」app 和访达都能看到)。"
+            "value" : "除了实时同步,每台设备在退出(Mac)/ 切到后台(iPhone)时还会把全部物品存一份 JSON 到「iCloud 云盘 › Whereabouts」,文件名带设备类型。它只是看得见的保险备份,不参与同步;需要恢复时,用上方的「导入」选择那个文件即可。"
           }
         }
       }
@@ -6448,13 +6493,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last sync: %@"
+            "value" : "Last backup: %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上次同步:%@"
+            "value" : "上次备份:%@"
           }
         }
       }
@@ -6465,13 +6510,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not synced yet"
+            "value" : "Not backed up yet"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "尚未同步"
+            "value" : "尚未备份"
           }
         }
       }
@@ -6482,13 +6527,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sync Now"
+            "value" : "Back Up Now"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立即同步"
+            "value" : "立即备份"
           }
         }
       }
@@ -6499,13 +6544,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Manual Sync"
+            "value" : "iCloud Drive Backup"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "手动同步"
+            "value" : "iCloud 云盘备份"
           }
         }
       }
@@ -6550,13 +6595,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All items, locations, history and tags will be removed. This can't be undone."
+            "value" : "All items, locations, history and tags will be removed. This can't be undone. With iCloud sync on, the data on your other devices signed in to the same account is erased too."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "所有物品、位置、历史记录与标签会被清除,此操作无法撤销。"
+            "value" : "所有物品、位置、历史记录与标签会被清除,此操作无法撤销。开着 iCloud 同步时,登录同一账号的其它设备上的数据也会一起被清空。"
           }
         }
       }
@@ -6578,19 +6623,35 @@
         }
       }
     },
+    "settings.data.clear.failed %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't clear data: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空失败:%@"
+          }
+        }
+      }
+    },
     "settings.data.clear.warning" : {
       "comment" : "Settings: footer warning under clear-all button.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Export your data first if you might need it later."
+            "value" : "Export your data first if you might need it later. With iCloud sync on, this also erases your other devices."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果以后可能需要,先导出一份再清空。"
+            "value" : "如果以后可能需要,先导出一份再清空。开着 iCloud 同步时会连同其它设备一起清空。"
           }
         }
       }
@@ -6888,6 +6949,55 @@
         }
       }
     },
+    "settings.hotkey.error.needsModifier" : {
+      "comment" : "Phase 122: hotkey recorder validation.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include at least one of ⌘, ⌥ or ⌃ (⇧ alone doesn't count)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要至少包含 ⌘、⌥ 或 ⌃ 之一(单独 ⇧ 不算)"
+          }
+        }
+      }
+    },
+    "settings.hotkey.error.registerFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't register that shortcut (another app may be using it). Kept the previous one."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法注册这个快捷键(可能已被其它 app 占用),已保留原来的键位。"
+          }
+        }
+      }
+    },
+    "settings.hotkey.error.reserved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That combination is used by macOS, common editing commands or typing — try another, e.g. ⌥⌘N."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个组合已被系统、常用编辑操作或输入字符占用,请换一个,比如 ⌥⌘N。"
+          }
+        }
+      }
+    },
     "settings.hotkey.footer" : {
       "comment" : "",
       "localizations" : {
@@ -6958,19 +7068,164 @@
         }
       }
     },
+    "settings.icloud.account" : {
+      "comment" : "Phase 122: settings row label for the current iCloud account.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Account"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 账号"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.checking" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查…"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.none" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in to iCloud"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录 iCloud"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.restricted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restricted (Screen Time or device management)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受限(家长控制或设备管理)"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.signedIn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signed in"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已登录"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temporarily unavailable"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂时不可用"
+          }
+        }
+      }
+    },
+    "settings.icloud.account.unknown" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't determine"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法确定"
+          }
+        }
+      }
+    },
+    "settings.icloud.accountID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account ID"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账号识别码"
+          }
+        }
+      }
+    },
+    "settings.icloud.accountID.hint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple doesn't let apps read your Apple ID email. If this code matches on two devices, they're on the same iCloud account."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "苹果不允许 app 读取 Apple ID 邮箱。两台设备上这串码相同,就是同一个 iCloud 账号。"
+          }
+        }
+      }
+    },
     "settings.icloud.footer.active" : {
       "comment" : "Phase 116 iCloud sync / iOS settings title / quotes.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your data syncs to the private iCloud space of your Apple Account. Sign in with the same account on Mac and iPhone and everything stays in sync; the developer can never see it."
+            "value" : "Your data syncs to the private iCloud space of your Apple Account; changes from your other devices usually show up within seconds to a minute or two. Sign in with the same account on Mac and iPhone; the developer can never see your data."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "数据会自动同步到你 Apple 账户的 iCloud 私有空间。Mac 和 iPhone 登录同一账户即可互通;开发者无法看到任何内容。"
+            "value" : "数据会自动同步到你 Apple 账户的 iCloud 私有空间,另一台设备的改动一般几秒到一两分钟内就会出现。Mac 和 iPhone 登录同一账户即可互通;开发者无法看到任何内容。"
           }
         }
       }
@@ -6981,13 +7236,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iCloud could not be reached this launch (not signed in, or restricted network). Data is kept locally for now — sign in to iCloud and reopen the app to start syncing."
+            "value" : "iCloud sync couldn't start this launch. Data is kept on this device for now — reopen the app to try again."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "本次启动未能连接 iCloud(未登录 iCloud 账户或网络受限),数据暂以本机模式保存,不影响使用。登录 iCloud 后重开 app 即自动同步。"
+            "value" : "本次启动未能启用 iCloud 同步,数据暂以本机模式保存,不影响使用。重开 app 会再试一次。"
+          }
+        }
+      }
+    },
+    "settings.icloud.footer.noAccount" : {
+      "comment" : "Phase 122: iCloud section footer when no iCloud account.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device isn't signed in to iCloud, so data is only on this device for now. Sign in to your Apple Account in system Settings (the same one as your other device) and syncing starts automatically."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台设备还没登录 iCloud,数据暂时只存在本机。到系统「设置」里登录 Apple 账户(和另一台设备同一个),就会自动开始同步。"
           }
         }
       }
@@ -7005,6 +7277,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同步已关闭 —— 数据只保存在本机。仍可用 JSON 导出/导入在设备间搬运。"
+          }
+        }
+      }
+    },
+    "settings.icloud.lastExport" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last sent"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次上传改动"
+          }
+        }
+      }
+    },
+    "settings.icloud.lastImport" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last received"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次收到改动"
+          }
+        }
+      }
+    },
+    "settings.icloud.never" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无"
           }
         }
       }
@@ -7056,6 +7376,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已开启"
+          }
+        }
+      }
+    },
+    "settings.icloud.syncDone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synced with iCloud"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已与 iCloud 同步"
+          }
+        }
+      }
+    },
+    "settings.icloud.syncFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync hit an error — it will retry automatically"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步出错,稍后会自动重试"
+          }
+        }
+      }
+    },
+    "settings.icloud.syncNoAccount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in to iCloud — can't sync"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录 iCloud,无法同步"
+          }
+        }
+      }
+    },
+    "settings.icloud.syncNow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync Now"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步"
+          }
+        }
+      }
+    },
+    "settings.icloud.syncing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步…"
           }
         }
       }
@@ -7284,7 +7684,7 @@
         }
       }
     },
-    "settings.locations.batch.delete.title" : {
+    "settings.locations.batch.delete.title %lld" : {
       "comment" : "Batch delete confirmation title.",
       "localizations" : {
         "en" : {
@@ -8060,22 +8460,18 @@
         }
       }
     },
-    "settings.sync.merged %@" : {
-
-    },
-    "settings.sync.merged %lld" : {
-      "comment" : "Phase 118.",
+    "settings.store.memoryFallback" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sync complete — merged %lld items from your other devices"
+            "value" : "The local database couldn't be opened this time, so the app is in a temporary mode and changes won't be saved. Please reopen the app; contact the developer if this persists."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步完成,合并了 %lld 条来自其它设备的数据"
+            "value" : "本机数据库这次没能打开,当前是临时模式:改动不会保存。请重新打开 app;若仍如此请联系开发者。"
           }
         }
       }
@@ -9150,6 +9546,87 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "store.unavailable.body" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Whereabouts couldn't read its database this time (the data file is still there — nothing is lost). Please quit the app completely and open it again; contact the developer if this keeps happening."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "何处这次没能读取本机的数据库(数据文件还在,没有丢)。请彻底退出 app 后重新打开;如果一直这样,请联系开发者。"
+          }
+        }
+      }
+    },
+    "store.unavailable.quit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Whereabouts"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出何处"
+          }
+        }
+      }
+    },
+    "store.unavailable.title" : {
+      "comment" : "Phase 122: blocking screen when the local store failed to open (in-memory fallback).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your data can't be opened right now"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数据暂时打不开"
+          }
+        }
+      }
+    },
+    "sync.error.notSignedIn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in to iCloud"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录 iCloud"
+          }
+        }
+      }
+    },
+    "sync.error.quota" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud storage is full — new changes can't be uploaded"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 储存空间已满,新改动暂时无法上传"
           }
         }
       }
