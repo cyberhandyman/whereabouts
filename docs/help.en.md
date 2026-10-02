@@ -820,4 +820,4 @@ AI status (shown only when an API key is configured):
 Menu bar  Whereabouts → About Whereabouts.
 
 
-Version: 1.1 (build 2)
+Version: 1.1.1 (build 3)

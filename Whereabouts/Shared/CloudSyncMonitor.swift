@@ -268,17 +268,27 @@ final class CloudSyncMonitor {
             return nil
         case .partialFailure:
             // 部分失败里只要有一条是"真问题"就报它,全是可恢复的就不报。
-            let inner = (ck.partialErrorsByItemID ?? [:]).values
-            for e in inner {
+            // Phase 123:同一批里只要有一条记录被服务器拒绝,其余几百条都会陪绑报
+            // batchRequestFailed —— 先看"真正的原因",否则显示出来的是一句看不懂的陪绑错误
+            // (1.1 正式环境缺 CD_EditLog 时就是这样:真正原因被埋,用户只看到"暂无")。
+            let inner = Array((ck.partialErrorsByItemID ?? [:]).values)
+            let rootCauses = inner.filter { ($0 as? CKError)?.code != .batchRequestFailed }
+            for e in rootCauses {
                 if let text = friendlyDescription(of: e) { return text }
             }
             return nil
+        case .batchRequestFailed:
+            return nil   // 只是陪绑,真正原因在同一批的另一条记录里
         case .notAuthenticated:
             return String(localized: "sync.error.notSignedIn")
         case .quotaExceeded:
             return String(localized: "sync.error.quota")
+        case .invalidArguments, .permissionFailure, .badContainer, .missingEntitlement,
+             .incompatibleVersion, .serverRejectedRequest, .badDatabase:
+            // 服务器拒收(比如正式环境数据结构缺类型 / 字段)—— 本机重试也没用,要开发者处理。
+            return String(localized: "sync.error.service \(ck.code.rawValue)")
         default:
-            return ck.localizedDescription
+            return String(localized: "sync.error.generic \(ck.code.rawValue)")
         }
     }
 

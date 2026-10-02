@@ -675,4 +675,4 @@ AI 状态(配置了 API key 时显示):
 菜单栏「Whereabouts → 关于何处」打开关于面板。
 
 
-版本 / Version: 1.1 (build 2)
+版本 / Version: 1.1.1 (build 3)

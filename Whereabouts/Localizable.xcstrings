@@ -7346,6 +7346,22 @@
         }
       }
     },
+    "settings.icloud.retryHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reopening the app will try again; contact the developer if this keeps happening."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新打开 app 会再试一次;一直这样的话请联系开发者。"
+          }
+        }
+      }
+    },
     "settings.icloud.status.local" : {
       "comment" : "Phase 116 iCloud sync / iOS settings title / quotes.",
       "localizations" : {
@@ -9599,6 +9615,22 @@
         }
       }
     },
+    "sync.error.generic %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud sync ran into an error (error %lld). Your data is safe on this device."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步出错(错误 %lld)。数据完整保存在本机,没有丢失。"
+          }
+        }
+      }
+    },
     "sync.error.notSignedIn" : {
       "localizations" : {
         "en" : {
@@ -9627,6 +9659,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud 储存空间已满,新改动暂时无法上传"
+          }
+        }
+      }
+    },
+    "sync.error.service %lld" : {
+      "comment" : "Phase 123: server rejected the CloudKit export (e.g. schema missing in production).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud rejected this upload (error %lld). Your data is safe on this device; check for an app update or contact the developer."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步服务拒绝了这次上传(错误 %lld)。数据完整保存在本机,没有丢失;请检查 App 更新,或联系开发者。"
           }
         }
       }

@@ -1,5 +1,14 @@
 # Whereabouts 更新日志 / Changelog
 
+## 1.1.1 (build 3) — 2026-10-02
+
+### Phase 123
+
+**🐛 修复 / Fixed**
+
+- **iCloud 同步出错、迟迟不同步**:iCloud 服务端的数据结构缺了「编辑历史」等类型和字段,上传被拒后同步整体停摆,Mac 上新记的东西传不到 iPhone。服务端已补齐并部署,Mac 与 iPhone 之间的新增、修改、删除现在都能及时同步。/ **iCloud sync errors and long delays**: the iCloud server-side schema was missing record types and fields (such as edit history), so uploads were rejected and sync stalled entirely — new items on the Mac never reached the iPhone. The server schema has been completed and deployed; additions, edits and deletions now sync between Mac and iPhone promptly.
+- **同步出错时说清原因**:一批上传里有一条被拒、其余陪绑失败时,设置 → iCloud 同步 现在会显示真正的原因(而不是一句看不懂的技术错误),并提示重新打开 app 会再试一次。/ **Sync errors now explain themselves**: when one record in an upload batch is rejected and the rest fail alongside it, Settings → iCloud Sync now shows the real cause (instead of a cryptic technical error) and notes that reopening the app will try again.
+
 ## 1.1 (build 2) — 2026-10-01
 
 ### Phase 122

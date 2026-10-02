@@ -69,7 +69,12 @@ struct ICloudStatusRows: View {
             // 账号不可用时错误多半就是"没登录",账号行已经说明,不再重复一行报错。
             if monitor.account == .available, let err = monitor.lastError {
                 Label {
-                    Text(verbatim: err)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: err)
+                        // Phase 123:这类错误之后 CoreData 本次运行内不再重试,重开 app 才会再试。
+                        Text("settings.icloud.retryHint")
+                            .foregroundStyle(.secondary)
+                    }
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                 }
